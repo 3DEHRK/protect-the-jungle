@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include <iostream>
+#include <vector>
 
 class Zombie {
 protected:
@@ -67,8 +68,8 @@ int main() {
 
 
     // Todo: make entity system collection (std::vector<Zombie>)
-    ZombieFast fastZombie(1);
-    ZombieTank tankZombie(2);
+    std::vector<Zombie> zombies;
+    zombies.push_back(ZombieFast(1));
 
     while (window.isOpen()) {
         sf::Event event;
@@ -81,8 +82,9 @@ int main() {
 
         if (clock.getElapsedTime().asSeconds() >= 1.0 / 60.0) {
             // Update game logic at 60 FPS
-            fastZombie.tick(window);
-            tankZombie.tick(window);
+            for (Zombie zombie : zombies) {
+                zombie.tick(window);
+            }
 
             clock.restart();
         }
