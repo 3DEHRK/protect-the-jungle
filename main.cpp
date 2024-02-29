@@ -2,11 +2,15 @@
 #include <iostream>
 #include <vector>
 #include <memory>
+#include <cmath>
 
 int WINDOW_WIDTH = 1200;
 int WINDOW_HEIGHT = 800;
 const float FRAME_RATE = 60.f;
 const int GRID_SPACE = 50;
+
+sf::Vector2i mousePos;
+bool buildModeActive = true;
 
 class Zombie {
 protected:
@@ -131,9 +135,25 @@ public:
     }
 };
 
+void buildMode(sf::RenderWindow& window, float time, std::vector<std::unique_ptr<Plant>>& plants) {
+    // Draw preview/selected square
+    sf::RectangleShape sprite;
+    sprite.setSize(sf::Vector2f(GRID_SPACE, GRID_SPACE));
+    sprite.setFillColor(sf::Color(150, 150, 255, sin(time * 5) * 100 + 150));
+    sprite.setPosition(mousePos.x / GRID_SPACE * GRID_SPACE, mousePos.y / GRID_SPACE * GRID_SPACE);
+    window.draw(sprite);
+
+    // Place plant and leave build mode
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+        //todo: check if slot is empty
+        plants.push_back(std::make_unique<ProductionPlant>(mousePos.y / GRID_SPACE, mousePos.x / GRID_SPACE));
+        buildModeActive = false;
+    }
+}
 
 int main() {
-    sf::Clock clock;
+    sf::Clock frameClock;
+    sf::Clock gameClock;
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Protect The Jungle: monkeys fight back!");
 
     // zombies collection using unique pointer
@@ -145,7 +165,6 @@ int main() {
     // plants collection using unique pointer
     std::vector<std::unique_ptr<Plant>> plants;
     plants.push_back(std::make_unique<Plant>(1,1));
-    plants.push_back(std::make_unique<ProductionPlant>(1,2));
     plants.push_back(std::make_unique<Plant>(2,1));
     plants.push_back(std::make_unique<Plant>(4,1));
 
@@ -157,22 +176,26 @@ int main() {
             }
         }
 
-        // Update game logic at 60 FPS
-        if (clock.getElapsedTime().asSeconds() >= 1.0 / FRAME_RATE) {
+        // Update game logic at specified FRAME_RATE
+        if (frameClock.getElapsedTime().asSeconds() >= 1.0 / FRAME_RATE) {
             window.clear();
+            mousePos = sf::Mouse::getPosition(window);
             
-            // zombies tick
-            for (const std::unique_ptr<Zombie>& zombie : zombies) {
-                zombie->tick(window);
-            }
+            if (buildModeActive)
+                buildMode(window, gameClock.getElapsedTime().asSeconds(), plants);
 
             // plants tick
             for (const std::unique_ptr<Plant>& plant : plants) {
                 plant->tick(window);
             }
 
+            // zombies tick
+            for (const std::unique_ptr<Zombie>& zombie : zombies) {
+                zombie->tick(window);
+            }
+
             window.display();
-            clock.restart();
+            frameClock.restart();
         }
 
     }
