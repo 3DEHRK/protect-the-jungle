@@ -13,84 +13,53 @@ const int GRID_SPACE = 50;
 sf::Vector2i mousePos;
 bool buildModeActive = true;
 
-
-class Projectile {
-protected:
-    float velocity;
-    int gridRow;
-    float progress;
-    float lifeSpan;
-    float lifeTimer = 0.f;
-    float height;
-    sf::CircleShape sprite;
-    std::vector<std::unique_ptr<Projectile>>* projectileVector;
-
-public:
-    Projectile(int gridRow, int gridColumn, std::vector<std::unique_ptr<Projectile>>* projectileVector) : gridRow(gridRow), velocity(500.f), progress(gridColumn * GRID_SPACE), height(-10.f), lifeSpan(1.5f), projectileVector(projectileVector) {
-        sprite.setRadius(10.f);
-        sprite.setPointCount(6);
-        sprite.setFillColor(sf::Color(250, 50, 50));
-        sprite.setPosition(progress, gridRow * GRID_SPACE);
-
-        velocity += velocity * ((rand() % 41) - 20) / 100.0f;
-    }
-
-    virtual void tick(sf::RenderWindow& window) {
-        progress += velocity * (1.f / FRAME_RATE);
-        height += 20.f * (1.f / FRAME_RATE);
-        velocity -= 20.f * (1.f / FRAME_RATE);
-        lifeTimer += (1.f / FRAME_RATE);
-
-        if (lifeTimer >= lifeSpan) {
-            // Find and remove this projectile from the vector
-            auto it = std::find_if(projectileVector->begin(), projectileVector->end(),
-                [this](const std::unique_ptr<Projectile>& proj) {
-                    return proj.get() == this;
-                });
-
-            if (it != projectileVector->end()) {
-                projectileVector->erase(it);
-            }
-        }
-
-        //todo: check for collision with zombie
-
-        sprite.setPosition(progress, gridRow * GRID_SPACE + height);
-        window.draw(sprite);
-    }
-};
+// forward declare existing classes
+class Plant;
+class Zombie;
+// plants & zombies collections using unique pointers
+// TODO: clean structure to generically store and delete (entity superclass?, identifiers?)
+std::vector<std::unique_ptr<Plant>> plants;
+std::vector<std::unique_ptr<Zombie>> zombies;
 
 
 class Zombie {
 protected:
     int gridRow;
-    float velocity;
-    float progress;
-    int health;
-    float cooldown;
+    float velocity = 15.f;
+    float progress = 0.f;
+    int health = 100;
+    float cooldown = 0.f;
     sf::CircleShape sprite;
 
 public:
-    Zombie(int initialGridRow) : gridRow(initialGridRow), progress(0.0f), velocity(15.0f), health(100) {
+    Zombie(int initialGridRow) : gridRow(initialGridRow) {
         sprite.setRadius(20.f);
         sprite.setFillColor(sf::Color(100, 250, 50));
         sprite.setPosition(progress, gridRow * GRID_SPACE);
     }
 
-    void damage(int amount) {
+    void damage(int amount, int cooldown = 15.f) {
         health -= amount;
+        this->cooldown += cooldown;
         if (health <= 0) {
-            std::cout << "Zombie defeated!" << std::endl;
+            // .. remove
+            velocity = 0;
         }
     }
 
     virtual void tick(sf::RenderWindow &window) {
         // Base implementation for generic Zombie movement/logic
-        progress += velocity * (1.f / FRAME_RATE);
+        if (cooldown < 0)
+            progress += velocity * (1.f / FRAME_RATE);
+        else
+            cooldown -= velocity * (1.f / FRAME_RATE);
 
         sprite.setPosition(WINDOW_WIDTH - progress, gridRow * GRID_SPACE);
         window.draw(sprite);
     }
+
+    int getGridRow() const { return gridRow; }
+    float getProgressLocation() const { return WINDOW_WIDTH - progress; }
 };
 
 class ZombieFast : public Zombie {
@@ -127,18 +96,73 @@ public:
 };
 
 
+class Projectile {
+protected:
+    float velocity = 500.f;
+    int gridRow;
+    float progress;
+    float lifeSpan;
+    float lifeTimer = 0.f;
+    float height;
+    int damage = 20;
+    sf::CircleShape sprite;
+    std::vector<std::unique_ptr<Projectile>>* projectileVector;
+
+public:
+    Projectile(int gridRow, int gridColumn, std::vector<std::unique_ptr<Projectile>>* projectileVector) : gridRow(gridRow), progress(gridColumn * GRID_SPACE), height(-10.f), lifeSpan(1.5f), projectileVector(projectileVector) {
+        sprite.setRadius(10.f);
+        sprite.setPointCount(6);
+        sprite.setFillColor(sf::Color(250, 50, 50));
+        sprite.setPosition(progress, gridRow * GRID_SPACE);
+
+        velocity += velocity * ((rand() % 41) - 20) / 100.0f;
+    }
+
+    virtual void tick(sf::RenderWindow& window) {
+        progress += velocity * (1.f / FRAME_RATE);
+        height += 20.f * (1.f / FRAME_RATE);
+        velocity -= 20.f * (1.f / FRAME_RATE);
+        lifeTimer += (1.f / FRAME_RATE);
+
+        if (lifeTimer >= lifeSpan) {
+            // Find and remove this projectile from the vector
+            auto it = std::find_if(projectileVector->begin(), projectileVector->end(),
+                [this](const std::unique_ptr<Projectile>& proj) {
+                    return proj.get() == this;
+                });
+            if (it != projectileVector->end()) {
+                projectileVector->erase(it);
+            }
+        }
+
+        // check for colliding zombies; damage & destroy self
+        for (std::unique_ptr<Zombie>& zombie : zombies) {
+            if (zombie->getGridRow() != gridRow)
+                continue;
+            if (std::abs(zombie->getProgressLocation() - progress) < 5.f) { // is nearly equal
+                zombie->damage(damage);
+                lifeSpan = 0.f;
+            }
+        }
+
+        sprite.setPosition(progress, gridRow * GRID_SPACE + height);
+        window.draw(sprite);
+    }
+};
+
+
 class Plant {
 protected:
     int gridRow;
     int gridColumn;
-    float attackSpeed;
-    int health;
+    float attackSpeed = 2.f;
+    int health = 100;
     float attackTimer = 0.f;
     sf::CircleShape sprite;
     std::vector<std::unique_ptr<Projectile>> projectiles;
 
 public:
-    Plant(int gridRow, int gridColumn) : gridRow(gridRow), gridColumn(gridColumn), health(100), attackSpeed(2.f) {
+    Plant(int gridRow, int gridColumn) : gridRow(gridRow), gridColumn(gridColumn) {
         sprite.setRadius(20.f);
         sprite.setPointCount(4);
         sprite.setFillColor(sf::Color(200, 250, 200));
@@ -176,7 +200,7 @@ private:
 
 public:
     ProductionPlant(int gridRow, int gridColumn) : Plant(gridRow, gridColumn), productionRate(10.f) {
-        attackSpeed = 999999999999.f;
+        attackSpeed = 999999999.f;
         sprite.setFillColor(sf::Color(255, 255, 100));
     }
 
@@ -222,16 +246,12 @@ int main() {
     sf::Clock gameClock;
     sf::RenderWindow window(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT), "Protect The Jungle: monkeys fight back!");
 
-    // zombies collection using unique pointer
-    std::vector<std::unique_ptr<Zombie>> zombies;
     zombies.push_back(std::make_unique<Zombie>(1));
     zombies.push_back(std::make_unique<ZombieFast>(2));
     zombies.push_back(std::make_unique<ZombieTank>(4));
 
-    // plants collection using unique pointer
-    std::vector<std::unique_ptr<Plant>> plants;
     plants.push_back(std::make_unique<Plant>(1,1));
-    plants.push_back(std::make_unique<Plant>(2,1));
+    plants.push_back(std::make_unique<Plant>(2,2));
     plants.push_back(std::make_unique<Plant>(4,1));
 
     while (window.isOpen()) {
