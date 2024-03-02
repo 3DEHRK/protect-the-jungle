@@ -8,9 +8,8 @@
 
 ## C++ Hints
 ### std::vector: Array like container with extra functionality
-### pointer: A variable that holds the memory adress of an object (created on the heap)
+### Entity* entity = new Entity(); A pointer variable that holds the memory adress of an object (created on the heap)
 ### to access a member through a pointer you use ptr->do() instead of obj.do()
-### std::unique_ptr: A smart pointer, with automatic garbage collection
 ### Zombie& zombie; & means take the object by reference instead of copying it
 
 <br/>
