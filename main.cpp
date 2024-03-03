@@ -3,6 +3,18 @@
 #include <vector>
 #include <cmath>
 
+class GridPos {
+public:
+    int x;
+    int y;
+
+    GridPos(int x, int y) : x(x), y(y) {}
+
+    bool equals(GridPos gridPos) {
+        return this->x == gridPos.x && this->y == gridPos.y;
+    }
+
+};
 
 // Every other game object must inherit from this class 🏛️
 // It provides basic game object functionalities that are used a lot
@@ -33,6 +45,8 @@ public:
     // defined below Game class because they use Game class functions
     virtual bool damage(int d);
     virtual void tick();
+    virtual GridPos getGridPos();
+
 };
 
 
@@ -139,14 +153,27 @@ public:
 
         // Place plant and leave build mode
         if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-            //todo: check if slot is empty
-            Entity* entity = new Entity();  //todo: how can i use plant here
-            entity->x = snapToGrid(mousePos.x);
-            entity->y = snapToGrid(mousePos.y);
-            createEntity(entity);
 
-            buildModeActive = false;
+            GridPos gridPos(posToIndex(snapToGrid(mousePos.x)), posToIndex(snapToGrid(mousePos.y)));
+            if (!hasIndexCollision(gridPos)) {
+                //todo: check if slot is empty works
+                Entity* entity = new Entity();  //todo: how can i use plant here
+                entity->x = snapToGrid(mousePos.x);
+                entity->y = snapToGrid(mousePos.y);
+                createEntity(entity);
+
+                buildModeActive = false;
+            }
         }
+    }
+
+    bool hasIndexCollision(const GridPos gridPos, const std::string& groupFilter = "") {
+        for (Entity* entity : entityCollection) {
+            if (entity->getGridPos().equals(gridPos) && !(entity->group == "" || entity->group == groupFilter)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     bool startGame() {
@@ -199,6 +226,9 @@ bool Entity::damage(int d) {
     return false;
 }
 
+GridPos Entity::getGridPos() {
+    return GridPos(game->posToIndex(x), game->posToIndex(y));
+}
 
 // ---------------------------- GAME ENTITIES ------------------------------
 
