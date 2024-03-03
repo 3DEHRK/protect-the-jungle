@@ -54,8 +54,6 @@ It offers:
     posToIndex(v); -> int  (110 -> 2)
 
     ... add commonly used functions to this class 🦅
-
-todo: fix 4+ entities memory leak
 */
 class Game {
 public:
@@ -111,13 +109,9 @@ public:
     }
 
     void destroyEntity(int entityId) {
-        auto it = std::remove_if(entityCollection.begin(), entityCollection.end(),
-                                [entityId](const Entity* entity) { return entity->id == entityId; });
-
-        if (it != entityCollection.end()) {
-            delete *it;
-            entityCollection.erase(it, entityCollection.end());
-        }
+        entityCollection.erase(std::remove_if(entityCollection.begin(), entityCollection.end(),
+                        [entityId](const Entity* entity) { return entity->id == entityId; }),
+                        entityCollection.end());
     }
 
     std::vector<Entity*> getCollisions(int x, int y, int hitRadius, const std::string& groupFilter = "") {
@@ -180,6 +174,7 @@ public:
 
                 gameWindow.display();
                 frameClock.restart();
+                //todo: save ressources by leting the thwead sleep when waiting 🛌🥺💤
             }
         }
         return false;
