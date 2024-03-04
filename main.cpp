@@ -3,8 +3,7 @@
 #include <vector>
 #include <cmath>
 
-class GridPos {
-public:
+struct GridPos {
     int x;
     int y;
 
@@ -13,11 +12,11 @@ public:
     bool equals(GridPos gridPos) {
         return this->x == gridPos.x && this->y == gridPos.y;
     }
-
 };
 
-// Every other game object must inherit from this class 🏛️
+// Every other game object (Entity) must inherit from this class 🏛️
 // It provides basic game object functionalities that are used a lot
+// ... add functionality that all entities use here
 class Entity {
 public:
     int x = 0;
@@ -36,6 +35,7 @@ public:
 
     Entity() {}
 
+    // use ready() instead of the constructor since class Game* game; isn't defined there yet
     virtual void ready() {
         texture.loadFromFile("res/entity.png");
         sprite.setTexture(texture);
@@ -46,28 +46,32 @@ public:
     virtual bool damage(int d);
     virtual void tick();
     virtual GridPos getGridPos();
-
 };
 
 
 /*
-The Game class holds all game objects as entities and makes them tick()
-It also offers commonly used functions
-...and just about everything else... 🐒
+The Game class holds all game objects as entities (std::vector<Entity*> entityCollection) and makes them tick() 🐒
+It also offers commonly used functions and holds the game window (sf::RenderWindow& gameWindow)
+To access it's members in an Entity use game->handyFunction(x,y);
 
-It offers:
-    createEntity(entity); -> entityId
-    destroyEntity(entityId);
+Manage entities at runtime:
+    int createEntity(Entity* entity)
+    void destroyEntity(int entityId)
 
-    getCollisions(x, y, hitRadius, ?groupFilter); -> std::vector<Entity*>
+Collision checks:
+    std::vector<Entity*> getCollisions(int x, int y, int hitRadius, const std::string& groupFilter = "")
+    std::vector<Entity*> getGridCollisions(const GridPos collision, const std::string& groupFilter = "")
+    bool hasGridCollision(const GridPos gridPos, const std::string& groupFilter = "")
 
-    deltaTime(); -> float (Time between frames, multiply this with velocity)
+Switching position units:
+    float snapOnGrid(float v)   139 -> 150
+    float gridToFree(int g)     2 -> 100
+    int freeToGrid(float f)     110 -> 2
 
-    snapToGrid(v); -> float  (139 -> 150)
-    indexToGrid(i); -> float  (2 -> 100)
-    posToIndex(v); -> int  (110 -> 2)
+Misc:
+    float deltaTime()   Time between frames, multiply this with velocity
 
-    ... add commonly used functions to this class 🦅
+... add commonly used functions to this class 🦅
 */
 class Game {
 public:
@@ -101,16 +105,16 @@ public:
         return 1.f / FRAME_RATE;
     }
 
-    float indexToGrid(int i) {
-        return i * GRID_SPACE;
+    float gridToFree(int g) {
+        return g * GRID_SPACE;
     }
 
-    float posToIndex(float v) {
-        return v / GRID_SPACE;
+    int freeToGrid(float f) {
+        return f / GRID_SPACE;
     }
 
-    float snapToGrid(float v) {
-        return indexToGrid(posToIndex(v));
+    float snapOnGrid(float v) {
+        return gridToFree(freeToGrid(v));
     }
 
     int createEntity(Entity* entity) {
@@ -134,7 +138,7 @@ public:
         for (Entity* entity : entityCollection) {
             // Check if the entity matches the filter and is within the hit radius
             // could be made more accurate & collision damage should be deltaTime sensitive
-            if ((entity->group == "" || entity->group == groupFilter) &&
+            if ((groupFilter == "" || entity->group == groupFilter) &&
                 std::hypot(entity->x - x, entity->y - y) <= hitRadius) {
                 collisions.push_back(entity);
             }
@@ -143,37 +147,62 @@ public:
         return collisions;
     }
 
-    void buildMode() {
-        // Draw preview/selected square
-        sf::RectangleShape sprite;
-        sprite.setSize(sf::Vector2f(GRID_SPACE, GRID_SPACE));
-        sprite.setFillColor(sf::Color(150, 150, 255, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150));
-        sprite.setPosition(snapToGrid(mousePos.x),snapToGrid(mousePos.y));
-        gameWindow.draw(sprite);
+    std::vector<Entity*> getGridCollisions(const GridPos collision, const std::string& groupFilter = "") {
+        std::vector<Entity*> collisions;
 
-        // Place plant and leave build mode
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-
-            GridPos gridPos(posToIndex(snapToGrid(mousePos.x)), posToIndex(snapToGrid(mousePos.y)));
-            if (!hasIndexCollision(gridPos)) {
-                //todo: check if slot is empty works
-                Entity* entity = new Entity();  //todo: how can i use plant here
-                entity->x = snapToGrid(mousePos.x);
-                entity->y = snapToGrid(mousePos.y);
-                createEntity(entity);
-
-                buildModeActive = false;
+        for (Entity* entity : entityCollection) {
+            if ((groupFilter == "" || entity->group == groupFilter) && entity->getGridPos().equals(collision)) {
+                collisions.push_back(entity);
             }
         }
+
+        return collisions;
     }
 
-    bool hasIndexCollision(const GridPos gridPos, const std::string& groupFilter = "") {
+    bool hasGridCollision(const GridPos gridPos, const std::string& groupFilter = "") {
         for (Entity* entity : entityCollection) {
-            if (entity->getGridPos().equals(gridPos) && !(entity->group == "" || entity->group == groupFilter)) {
+            if (entity->getGridPos().equals(gridPos) && (groupFilter == "" || entity->group == groupFilter)) {
                 return true;
             }
         }
         return false;
+    }
+
+    void buildMode(bool destroy = true) {
+        sf::RectangleShape area;
+        // Set selection square pulsating color
+        sf::Color areaColor;
+        if (destroy)
+            areaColor = sf::Color(255, 150, 150, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
+        else
+            areaColor = sf::Color(150, 150, 255, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
+        area.setFillColor(areaColor);
+        // Draw selection square
+        area.setSize(sf::Vector2f(GRID_SPACE, GRID_SPACE));
+        area.setPosition(snapOnGrid(mousePos.x),snapOnGrid(mousePos.y));
+        gameWindow.draw(area);
+
+        // Do action on click & leave build mode
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+            GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
+
+            if (destroy) {
+                for (Entity* entity : getGridCollisions(gridPos, "plant")) {
+                    destroyEntity(entity->id);
+
+                    buildModeActive = false;
+                }
+            } else {
+                if (!hasGridCollision(gridPos, "plant")) {
+                    Entity* entity = new Entity();  //todo: how can i use plant here (maybe function declaration above game and implementation below plant)
+                    entity->x = gridToFree(gridPos.x);
+                    entity->y = gridToFree(gridPos.y);
+                    createEntity(entity);
+
+                    buildModeActive = false;
+                }
+            }
+        }
     }
 
     bool startGame() {
@@ -227,7 +256,7 @@ bool Entity::damage(int d) {
 }
 
 GridPos Entity::getGridPos() {
-    return GridPos(game->posToIndex(x), game->posToIndex(y));
+    return GridPos(game->freeToGrid(x), game->freeToGrid(y));
 }
 
 // ---------------------------- GAME ENTITIES ------------------------------
@@ -248,7 +277,7 @@ public:
         sprite.setTexture(texture);
         sprite.setScale(sf::Vector2f(0.5f, 0.5f));
 
-        y = game->indexToGrid(startingGridRow);
+        y = game->gridToFree(startingGridRow);
         x = game->WINDOW_WIDTH;
         xVel = -100.f;
     }
@@ -270,7 +299,7 @@ public:
     }
 
     // Zombie specific functions
-    int getGridRow() const { return game->posToIndex(x); }
+    int getGridRow() const { return game->freeToGrid(x); }
     float getProgressLocation() const { return game->WINDOW_WIDTH - x; }
 };
 
@@ -292,8 +321,8 @@ public:
         Entity::ready();
         group = "projectile";
 
-        x = game->indexToGrid(gridColumn);
-        y = game->indexToGrid(gridRow) - 20.f;
+        x = game->gridToFree(gridColumn);
+        y = game->gridToFree(gridRow) - 20.f;
         xVel = baseVelocity;
     }
 
@@ -335,8 +364,8 @@ public:
         sprite.setTexture(texture);
         sprite.setScale(sf::Vector2f(0.5f, 0.5f));
 
-        x = game->indexToGrid(gridColumn);
-        y = game->indexToGrid(gridRow);
+        x = game->gridToFree(gridColumn);
+        y = game->gridToFree(gridRow);
     }
 
     void tick() override {
