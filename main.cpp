@@ -31,7 +31,7 @@ public:
     int id = -1;
     std::string group = "entity";
     
-    class Game* game;
+    class Game* game = nullptr;
 
     Entity() {}
 
@@ -86,13 +86,17 @@ public:
     sf::Vector2i mousePos;
     sf::Clock frameClock;
     sf::Clock gameClock;
+    sf::Font font;
 
     bool buildModeActive = true;
     int uniqueId = 0;
+    
+    bool testDestroy = false;
 
     Game(sf::RenderWindow& window) : gameWindow(window) {
         WINDOW_WIDTH = gameWindow.getSize().x;
         WINDOW_HEIGHT = gameWindow.getSize().y;
+        font.loadFromFile("res/arial.ttf");
     }
 
     ~Game() {
@@ -137,7 +141,7 @@ public:
 
         for (Entity* entity : entityCollection) {
             // Check if the entity matches the filter and is within the hit radius
-            // could be made more accurate & collision damage should be deltaTime sensitive
+            // collision damage should be deltaTime sensitive
             if ((groupFilter == "" || entity->group == groupFilter) &&
                 std::hypot(entity->x - x, entity->y - y) <= hitRadius) {
                 collisions.push_back(entity);
@@ -168,7 +172,7 @@ public:
         return false;
     }
 
-    void buildMode(bool destroy = true) {
+    void buildMode(bool destroy = false) {
         sf::RectangleShape area;
         // Set selection square pulsating color
         sf::Color areaColor;
@@ -200,6 +204,7 @@ public:
                     createEntity(entity);
 
                     buildModeActive = false;
+                    testDestroy = true;
                 }
             }
         }
@@ -208,6 +213,7 @@ public:
     bool startGame() {
         while (gameWindow.isOpen()) {
             sf::Event event;
+
             while (gameWindow.pollEvent(event)) {
                 if (event.type == sf::Event::Closed) {
                     gameWindow.close();
@@ -222,7 +228,7 @@ public:
                 mousePos = sf::Mouse::getPosition(gameWindow);
 
                 if (buildModeActive)
-                    buildMode();
+                    buildMode(testDestroy);
 
                 for (Entity* entity : entityCollection) {
                     entity->tick();
@@ -235,7 +241,6 @@ public:
         }
         return false;
     }
-
 };
 
 
@@ -244,6 +249,14 @@ void Entity::tick() {
     y += yVel * game->deltaTime();
     sprite.setPosition(x, y);
     game->gameWindow.draw(sprite);
+
+    //debugging (to be removed)
+    sf::Text groupText;
+    groupText.setFont(game->font);
+    groupText.setString(group);
+    groupText.setCharacterSize(20);
+    groupText.setPosition(x, y);
+    game->gameWindow.draw(groupText);
 }
 
 bool Entity::damage(int d) {
@@ -387,7 +400,10 @@ private:
     float productionTimer = 0.f;
 
 public:
-    ProductionPlant(int gridRow, int gridColumn) : Plant(gridRow, gridColumn) {
+    ProductionPlant(int gridRow, int gridColumn) : Plant(gridRow, gridColumn) {}
+
+    void ready() override {
+        Plant::ready();
         attackSpeed = 999999999.f;
     }
 
@@ -420,7 +436,10 @@ int main() {
     Plant* plant = new Plant(2,2);
     game->createEntity(plant);
 
-    ProductionPlant* productionPlant = new ProductionPlant(4,1);
+    Plant* plant1 = new Plant(4, 1);
+    game->createEntity(plant1);
+
+    ProductionPlant* productionPlant = new ProductionPlant(3,1);
     game->createEntity(productionPlant);
 
     Zombie* zombie = new Zombie(2);
