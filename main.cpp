@@ -23,7 +23,7 @@ public:
     int y = 0;
     float xVel = 0;
     float yVel = 0;
-    int health = 100;
+    float health = 100;
 
     sf::Texture texture;
     sf::Sprite sprite;
@@ -43,9 +43,9 @@ public:
     }
 
     // defined below Game class because they use Game class functions
-    virtual bool damage(int d);
+    virtual bool damage(float d);
     virtual void tick();
-    virtual GridPos getGridPos();
+    GridPos getGridPos();
 };
 
 
@@ -250,16 +250,22 @@ void Entity::tick() {
     sprite.setPosition(x, y);
     game->gameWindow.draw(sprite);
 
-    //debugging (to be removed)
+    //debugging info (to be removed)
     sf::Text groupText;
     groupText.setFont(game->font);
     groupText.setString(group);
     groupText.setCharacterSize(20);
     groupText.setPosition(x, y);
     game->gameWindow.draw(groupText);
+    sf::Text healthText;
+    healthText.setFont(game->font);
+    healthText.setString(std::to_string((int)health));
+    healthText.setCharacterSize(16);
+    healthText.setPosition(x, y + 20.f);
+    game->gameWindow.draw(healthText);
 }
 
-bool Entity::damage(int d) {
+bool Entity::damage(float d) {
     health -= d;
     if (health <= 0) {
         game->destroyEntity(id);
@@ -279,6 +285,8 @@ class Zombie : public Entity {
 protected:
     float knockback = 0.f;
     int startingGridRow = 1;
+    float xVelNormal = -100.f;
+    float damageDonePerSec = 35.f;
 
 public:
     Zombie(int startingGridRow) : startingGridRow(startingGridRow) {}
@@ -292,10 +300,10 @@ public:
 
         y = game->gridToFree(startingGridRow);
         x = game->WINDOW_WIDTH;
-        xVel = -100.f;
+        xVel = xVelNormal;
     }
 
-    bool damage(int d) override {
+    bool damage(float d) override {
         knockback += d / 2;
 
         // Call Parent's (Entity's) base implementation
@@ -303,6 +311,17 @@ public:
     }
 
     void tick() override {
+        // mhhh yummieyum.. let me see if theres a plant i can take a bite off 🧟
+        if (game->hasGridCollision(getGridPos(), "plant")) {
+            xVel = 0.f;
+            std::vector<Entity*> collisions = game->getGridCollisions(getGridPos(), "plant");
+            for (Entity* hit : collisions) {
+                hit->damage(damageDonePerSec * game->deltaTime());
+            }
+        } else {
+            xVel = xVelNormal;
+        }
+
         x += knockback;
         if (knockback > 0.f)
             knockback -= game->deltaTime() * 15.f;
@@ -351,7 +370,7 @@ public:
             game->destroyEntity(id);
 
         // check for colliding zombies; damage & destroy self
-        std::vector<Entity*> hits = game->getCollisions(x, y, 20.f, "zombie");
+        std::vector<Entity*> hits = game->getCollisions(x, y, 25.f, "zombie");
         for (Entity* zombie : hits) {
             zombie->damage(damageDone);
             game->destroyEntity(id);
@@ -432,7 +451,7 @@ int main() {
 
     // display menu
 
-    // add sample entitys
+    // add demo entitys
     Plant* plant = new Plant(2,2);
     game->createEntity(plant);
 
@@ -444,6 +463,14 @@ int main() {
 
     Zombie* zombie = new Zombie(2);
     game->createEntity(zombie);
+
+    Zombie* zombie1 = new Zombie(2);
+    game->createEntity(zombie1);
+    zombie1->x += 100.f;
+
+    Zombie* zombie2 = new Zombie(4);
+    game->createEntity(zombie2);
+    zombie2->x += 200.f;
 
     if (game->startGame()) {
         // victory
