@@ -46,8 +46,10 @@ public:
     virtual bool damage(float d);
     virtual void tick();
     GridPos getGridPos();
+    void setGridPos(GridPos gridPos);
 };
 
+void buildPlant(Game* game, GridPos gridPos);
 
 /*
 The Game class holds all game objects as entities (std::vector<Entity*> entityCollection) and makes them tick() 🐒
@@ -103,7 +105,7 @@ public:
 
     ~Game() {
         for (Entity* entity : entityCollection) {
-            delete entity;
+            destroyEntity(entity->id);
         }
     }
 
@@ -200,10 +202,7 @@ public:
                 }
             } else {
                 if (!hasGridCollision(gridPos, "plant")) {
-                    Entity* entity = new Entity();  //todo: how can i use plant here (maybe function declaration above game and implementation below plant)
-                    entity->x = gridToFree(gridPos.x);
-                    entity->y = gridToFree(gridPos.y);
-                    createEntity(entity);
+                    buildPlant(this, gridPos);
 
                     buildModeActive = false;
                     testDestroy = true;
@@ -282,6 +281,11 @@ GridPos Entity::getGridPos() {
     return GridPos(game->freeToGrid(x), game->freeToGrid(y));
 }
 
+void Entity::setGridPos(GridPos gridPos) {
+    x = game->gridToFree(gridPos.x);
+    y = game->gridToFree(gridPos.y);
+}
+
 // ---------------------------- GAME ENTITIES ------------------------------
 
 
@@ -346,19 +350,18 @@ protected:
     int damageDone = 15;
     float baseVelocity = 1000.f;
 
-    int gridRow;
-    int gridColumn;
+    GridPos initGridPos;
     float lifeTimer = 0.f;
 
 public:
-    Projectile(int gridRow, int gridColumn) : gridRow(gridRow), gridColumn(gridColumn) {}
+    Projectile(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
         Entity::ready();
         group = "projectile";
 
-        x = game->gridToFree(gridColumn);
-        y = game->gridToFree(gridRow) - 20.f;
+        x = game->gridToFree(initGridPos.x);
+        y = game->gridToFree(initGridPos.y) - 20.f;
         xVel = baseVelocity;
     }
 
@@ -385,13 +388,13 @@ public:
 
 class Plant : public Entity {
 protected:
-    int gridRow;
-    int gridColumn;
     float attackSpeed = 2.f;
     float attackTimer = 0.f;
 
+    GridPos initGridPos;
+
 public:
-    Plant(int gridRow, int gridColumn) : gridRow(gridRow), gridColumn(gridColumn) {}
+    Plant(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
         group = "plant";
@@ -400,15 +403,14 @@ public:
         sprite.setTexture(texture);
         sprite.setScale(sf::Vector2f(0.5f, 0.5f));
 
-        x = game->gridToFree(gridColumn);
-        y = game->gridToFree(gridRow);
+        setGridPos(initGridPos);
     }
 
     void tick() override {
         attackTimer += game->deltaTime();
 
         if (attackTimer >= attackSpeed) {
-            Projectile* projectile = new Projectile(gridRow, gridColumn);
+            Projectile* projectile = new Projectile(this->getGridPos());
             game->createEntity(projectile);
             attackTimer = 0.f;
         }
@@ -423,11 +425,11 @@ private:
     float productionTimer = 0.f;
 
 public:
-    ProductionPlant(int gridRow, int gridColumn) : Plant(gridRow, gridColumn) {}
+    ProductionPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
         Plant::ready();
-        attackSpeed = 999999999.f;
+        attackSpeed = 99999999.f;
     }
 
     void tick() override {
@@ -446,6 +448,11 @@ public:
 };
 
 
+void buildPlant(Game* game, GridPos gridPos) {
+    Plant* plant = new Plant(gridPos);
+    game->createEntity(plant);
+}
+
 
 // Entry point function
 int main() {
@@ -456,13 +463,13 @@ int main() {
     // display menu
 
     // add demo entitys
-    Plant* plant = new Plant(2,2);
+    Plant* plant = new Plant(GridPos(2, 2));
     game->createEntity(plant);
 
-    Plant* plant1 = new Plant(4, 1);
+    Plant* plant1 = new Plant(GridPos(1, 4));
     game->createEntity(plant1);
 
-    ProductionPlant* productionPlant = new ProductionPlant(3,1);
+    ProductionPlant* productionPlant = new ProductionPlant(GridPos(1,3));
     game->createEntity(productionPlant);
 
     Zombie* zombie = new Zombie(2);
