@@ -88,6 +88,8 @@ public:
     sf::Clock gameClock;
     sf::Font font;
 
+    sf::Time delta;
+
     bool buildModeActive = true;
     int uniqueId = 0;
     
@@ -211,33 +213,35 @@ public:
     }
 
     bool startGame() {
-        while (gameWindow.isOpen()) {
-            sf::Event event;
+        sf::Clock sleepClock;
 
+        // Update game logic at FRAME_RATE
+        while (gameWindow.isOpen()) {
+            sleepClock.restart();
+
+            sf::Event event;
             while (gameWindow.pollEvent(event)) {
                 if (event.type == sf::Event::Closed) {
                     gameWindow.close();
                 }
             }
 
-            // Update game logic at FRAME_RATE
-            if (frameClock.getElapsedTime().asSeconds() >= deltaTime()) {
-                // This happens every tick
+            gameWindow.clear();
+            mousePos = sf::Mouse::getPosition(gameWindow);
 
-                gameWindow.clear();
-                mousePos = sf::Mouse::getPosition(gameWindow);
-
-                if (buildModeActive)
-                    buildMode(testDestroy);
-
-                for (Entity* entity : entityCollection) {
-                    entity->tick();
-                }
-
-                gameWindow.display();
-                frameClock.restart();
-                //todo: save ressources by leting the thwead sleep when waiting 🛌🥺💤
+            for (Entity* entity : entityCollection) {
+                entity->tick();
             }
+
+            if (buildModeActive)
+                buildMode(testDestroy);
+
+            gameWindow.display();
+
+            // let our thread sleep until dawn of new frame
+            sf::Time remainingTime = sf::Time(sf::seconds(deltaTime())) - sleepClock.getElapsedTime();
+            if (remainingTime > sf::Time::Zero)
+                sf::sleep(remainingTime);
         }
         return false;
     }
