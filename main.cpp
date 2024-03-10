@@ -101,6 +101,15 @@ public:
         WINDOW_WIDTH = gameWindow.getSize().x;
         WINDOW_HEIGHT = gameWindow.getSize().y;
         font.loadFromFile("res/arial.ttf");
+
+        // do not ask, do not change; it fixes the crashes (keep it on the low)
+        for (int i = 0; i < 9; i++) {
+            entityCollection.push_back(nullptr);
+        }
+        entityCollection.clear();
+
+        // fix thread sleep stutters on windows:
+        // SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     }
 
     ~Game() {
