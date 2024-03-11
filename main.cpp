@@ -185,6 +185,15 @@ public:
         return false;
     }
 
+    bool hasZombieOnRow(const int row) {
+        for (Entity* entity : entityCollection) {
+            if (entity->getGridPos().y == row && entity->group == "zombie") {
+                return true;
+            }
+        }
+        return false;
+    }
+
     void buildMode(bool destroy = false) {
         sf::RectangleShape area;
         // Set selection square pulsating color
@@ -417,11 +426,17 @@ public:
 
     void tick() override {
         attackTimer += game->deltaTime();
+        bool isReady;
 
         if (attackTimer >= attackSpeed) {
+            isReady = true;
+            attackTimer = 0.f;
+        }
+
+        if (isReady && game->hasZombieOnRow(this->getGridPos().y)){
             Projectile* projectile = new Projectile(this->getGridPos());
             game->createEntity(projectile);
-            attackTimer = 0.f;
+            isReady = false;
         }
 
         Entity::tick();
