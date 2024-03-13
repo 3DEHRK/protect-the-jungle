@@ -53,8 +53,6 @@ public:
     void setGridPos(GridPos gridPos);
 };
 
-void buildPlant(Game* game, GridPos gridPos);
-
 /*
 The Game class holds all game objects as entities (std::vector<Entity*> entityCollection) and makes them tick() 🐒
 It also offers commonly used functions and holds the game window (sf::RenderWindow& gameWindow)
@@ -195,7 +193,6 @@ public:
         for (Entity* entity : entityCollection) {
             GridPos entityGridPos = entity->getGridPos();
             if(gridPos.sameYBiggerX(entityGridPos) && entity->group == "zombie") {
-                std::cout << "Zombie?!" << std::endl;
                 return true;
             }
         }
@@ -204,7 +201,6 @@ public:
 
     void renderMouseSelection(const bool destroyMode){
          sf::RectangleShape area;
-
 
         // Set selection square pulsating color
         sf::Color areaColor;
@@ -219,13 +215,13 @@ public:
         gameWindow.draw(area);
     }
 
-    void placePlant();
+    int placePlant();
 
     void destroyPlant() {
         GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
 
         for (Entity* entity : getGridCollisions(gridPos, "plant")) {
-                  destroyEntity(entity->id);
+            destroyEntity(entity->id);
         }
     }
 
@@ -257,7 +253,7 @@ public:
                     destroyPlant();
                 } else {
                     if (bananaCount >= 0)
-                    placePlant();
+                        bananaCount -= placePlant();
                 }
             }
 
@@ -392,8 +388,6 @@ public:
     }
 
     void tick() override {
-        Entity::tick();
-
         // imitate physics
         xVel -= game->deltaTime() * 200;
         yVel += game->deltaTime() * 200;
@@ -408,6 +402,8 @@ public:
             zombie->damage(damageDone);
             game->destroyEntity(id);
         }
+
+        Entity::tick();
     }
 };
 
@@ -420,6 +416,7 @@ protected:
     GridPos initGridPos;
 
 public:
+    int price = 1;
     Plant(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
@@ -459,11 +456,6 @@ private:
 public:
     ProductionPlant(GridPos gridPos) : Plant(gridPos) {}
 
-    void ready() override {
-        Plant::ready();
-        attackSpeed = 99999999.f;
-    }
-
     void tick() override {
         productionTimer += game->deltaTime();
         if (productionTimer >= productionRate)
@@ -479,21 +471,16 @@ public:
     }
 };
 
-
-void buildPlant(Game* game, GridPos gridPos) {
-    Plant* plant = new Plant(gridPos);
-    game->createEntity(plant);
-}
-
-void Game::placePlant() {
+int Game::placePlant() {
   GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
   if (!hasGridCollision(gridPos, "plant")) {
       Plant* plant = new Plant(gridPos);
       createEntity(plant);
-
-      bananaCount -= 1;
+      return plant->price;
   }
+  return 0;
 }
+
 // Entry point function
 int main() {
     
