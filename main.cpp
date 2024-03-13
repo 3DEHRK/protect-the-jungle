@@ -244,7 +244,8 @@ public:
             }
 
             gameWindow.clear();
-            mousePos = sf::Mouse::getPosition(gameWindow);
+            mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
+            mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
 
             for (Entity* entity : entityCollection) {
                 entity->tick();
