@@ -12,6 +12,10 @@ struct GridPos {
     bool equals(GridPos gridPos) {
         return this->x == gridPos.x && this->y == gridPos.y;
     }
+
+    bool sameYBiggerX (GridPos gridPos) {
+        return this->x <= gridPos.x && this->y == gridPos.y;
+    }
 };
 
 // Every other game object (Entity) must inherit from this class 🏛️
@@ -92,10 +96,12 @@ public:
 
     sf::Time delta;
 
-    bool buildModeActive = true;
+    int bananaCount = 0;
     int uniqueId = 0;
-    
-    bool testDestroy = false;
+
+    // true -> build; false -> destroy
+    bool destroyMode = false; // value should be adjusted with a "küderchübel" button to toggle build mode
+    Entity selectedPlant;
 
     Game(sf::RenderWindow& window) : gameWindow(window) {
         WINDOW_WIDTH = gameWindow.getSize().x;
@@ -185,20 +191,24 @@ public:
         return false;
     }
 
-    bool hasZombieOnRow(const int row) {
+    bool hasZombieOnRowBefore(GridPos gridPos) {
         for (Entity* entity : entityCollection) {
-            if (entity->getGridPos().y == row && entity->group == "zombie") {
+            GridPos entityGridPos = entity->getGridPos();
+            if(gridPos.sameYBiggerX(entityGridPos) && entity->group == "zombie") {
+                std::cout << "Zombie?!" << std::endl;
                 return true;
             }
         }
         return false;
     }
 
-    void buildMode(bool destroy = false) {
-        sf::RectangleShape area;
+    void renderMouseSelection(const bool destroyMode){
+         sf::RectangleShape area;
+
+
         // Set selection square pulsating color
         sf::Color areaColor;
-        if (destroy)
+        if (destroyMode)
             areaColor = sf::Color(255, 150, 150, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
         else
             areaColor = sf::Color(150, 150, 255, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
@@ -207,25 +217,15 @@ public:
         area.setSize(sf::Vector2f(GRID_SPACE, GRID_SPACE));
         area.setPosition(snapOnGrid(mousePos.x),snapOnGrid(mousePos.y));
         gameWindow.draw(area);
+    }
 
-        // Do action on click & leave build mode
-        if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-            GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
+    void placePlant();
 
-            if (destroy) {
-                for (Entity* entity : getGridCollisions(gridPos, "plant")) {
-                    destroyEntity(entity->id);
+    void destroyPlant() {
+        GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
 
-                    buildModeActive = false;
-                }
-            } else {
-                if (!hasGridCollision(gridPos, "plant")) {
-                    buildPlant(this, gridPos);
-
-                    buildModeActive = false;
-                    testDestroy = true;
-                }
-            }
+        for (Entity* entity : getGridCollisions(gridPos, "plant")) {
+                  destroyEntity(entity->id);
         }
     }
 
@@ -244,15 +244,21 @@ public:
             }
 
             gameWindow.clear();
-            mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
-            mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
+            mousePos = sf::Mouse::getPosition(gameWindow);
 
             for (Entity* entity : entityCollection) {
                 entity->tick();
             }
 
-            if (buildModeActive)
-                buildMode(testDestroy);
+            renderMouseSelection(destroyMode);
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
+                if (destroyMode) {
+                    destroyPlant();
+                } else {
+                    if (bananaCount >= 0)
+                    placePlant();
+                }
+            }
 
             gameWindow.display();
 
@@ -434,7 +440,7 @@ public:
             attackTimer = 0.f;
         }
 
-        if (isReady && game->hasZombieOnRow(this->getGridPos().y)){
+        if (isReady && game->hasZombieOnRowBefore(this->getGridPos())){
             Projectile* projectile = new Projectile(this->getGridPos());
             game->createEntity(projectile);
             isReady = false;
@@ -462,12 +468,12 @@ public:
         if (productionTimer >= productionRate)
             produce();
 
-        Plant::tick();
+        Entity::tick();
     }
 
     void produce() {
+        game->bananaCount += 1;
         std::cout << "Banana produced!" << std::endl;
-        game->buildModeActive = true;
         productionTimer = 0.f;
     }
 };
@@ -478,7 +484,15 @@ void buildPlant(Game* game, GridPos gridPos) {
     game->createEntity(plant);
 }
 
+void Game::placePlant() {
+  GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
+  if (!hasGridCollision(gridPos, "plant")) {
+      Plant* plant = new Plant(gridPos);
+      createEntity(plant);
 
+      bananaCount -= 1;
+  }
+}
 // Entry point function
 int main() {
     
