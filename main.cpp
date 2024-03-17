@@ -2,6 +2,63 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <functional>
+
+class Button {
+public:
+    Button(sf::Vector2f position, sf::Vector2f size, const std::string& text, const sf::Color& color, std::function<void()> onClick)
+        : m_position(position), m_size(size), m_textString(text), m_color(color), m_onClick(onClick) {
+        m_shape.setPosition(position);
+        m_shape.setSize(size);
+        m_shape.setFillColor(color);
+        m_font.loadFromFile("res/arial.ttf");
+        m_text.setFont(m_font);
+        m_text.setString(text);
+        m_text.setCharacterSize(20);
+        m_text.setFillColor(sf::Color::White);
+        sf::FloatRect textRect = m_text.getLocalBounds();
+        m_text.setOrigin(textRect.left + textRect.width / 2.0f,
+                         textRect.top + textRect.height / 2.0f);
+        m_text.setPosition(position.x + size.x / 2.0f, position.y + size.y / 2.0f);
+    }
+
+    bool handleEvent(sf::Event event, sf::RenderWindow& window) {
+        bool returnValue = false;
+        if (event.type == sf::Event::MouseButtonPressed) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+            if (m_shape.getGlobalBounds().contains(mousePos)) {
+                m_onClick();
+            }
+        }
+        else if (event.type == sf::Event::MouseMoved) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+            if (m_shape.getGlobalBounds().contains(mousePos)) {
+                m_shape.setFillColor(m_colorHover);
+                returnValue = true;
+            }
+            else {
+                m_shape.setFillColor(m_color);
+            }
+        }
+        return returnValue;
+    }
+
+    void draw(sf::RenderWindow& window) {
+        window.draw(m_shape);
+        window.draw(m_text);
+    }
+
+private:
+    sf::RectangleShape m_shape;
+    sf::Text m_text;
+    sf::Font m_font;
+    sf::Vector2f m_position;
+    sf::Vector2f m_size;
+    std::string m_textString;
+    sf::Color m_color;
+    sf::Color m_colorHover = sf::Color::Green;
+    std::function<void()> m_onClick;
+};
 
 struct GridPos {
     int x;
@@ -227,6 +284,7 @@ public:
 
     bool startGame() {
         sf::Clock sleepClock;
+        Button cleverButton(sf::Vector2f(400.f, 600.f), sf::Vector2f(200.f, 100.f), "My Clever Button", sf::Color::Blue, []{ std::cout<<"clever Buton clicked function was executed :p"; });
 
         // Update game logic at FRAME_RATE
         while (gameWindow.isOpen()) {
@@ -234,21 +292,22 @@ public:
 
             sf::Event event;
             while (gameWindow.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) {
+                if (event.type == sf::Event::Closed)
                     gameWindow.close();
-                }
+                cleverButton.handleEvent(event, gameWindow);
             }
 
-            gameWindow.clear();
             mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
             mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
+
+            gameWindow.clear();
 
             for (Entity* entity : entityCollection) {
                 entity->tick();
             }
 
             renderMouseSelection(destroyMode);
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)){
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
                 if (destroyMode) {
                     destroyPlant();
                 } else {
@@ -256,6 +315,8 @@ public:
                         bananaCount -= placePlant();
                 }
             }
+
+            cleverButton.draw(gameWindow);
 
             gameWindow.display();
 
