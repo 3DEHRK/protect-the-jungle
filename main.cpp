@@ -7,14 +7,14 @@
 class Button {
 public:
     Button(sf::Vector2f position, sf::Vector2f size, const std::string& text, const sf::Color& color, std::function<void()> onClick)
-        : m_position(position), m_size(size), m_textString(text), m_color(color), m_onClick(onClick) {
+        : m_position(position), m_size(size), m_textString(text), m_color(color), m_colorHover(color.r*1.3,color.g*1.3,color.b*1.3), m_onClick(onClick) {
         m_shape.setPosition(position);
         m_shape.setSize(size);
         m_shape.setFillColor(color);
         m_font.loadFromFile("res/arial.ttf");
         m_text.setFont(m_font);
         m_text.setString(text);
-        m_text.setCharacterSize(20);
+        m_text.setCharacterSize(22);
         m_text.setFillColor(sf::Color::White);
         sf::FloatRect textRect = m_text.getLocalBounds();
         m_text.setOrigin(textRect.left + textRect.width / 2.0f,
@@ -22,25 +22,19 @@ public:
         m_text.setPosition(position.x + size.x / 2.0f, position.y + size.y / 2.0f);
     }
 
-    bool handleEvent(sf::Event event, sf::RenderWindow& window) {
-        bool returnValue = false;
+    void handleEvent(sf::Event event, sf::RenderWindow& window) {
         if (event.type == sf::Event::MouseButtonPressed) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-            if (m_shape.getGlobalBounds().contains(mousePos)) {
+            if (m_shape.getGlobalBounds().contains(mousePos))
                 m_onClick();
-            }
         }
         else if (event.type == sf::Event::MouseMoved) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-            if (m_shape.getGlobalBounds().contains(mousePos)) {
+            if (m_shape.getGlobalBounds().contains(mousePos))
                 m_shape.setFillColor(m_colorHover);
-                returnValue = true;
-            }
-            else {
+            else
                 m_shape.setFillColor(m_color);
-            }
         }
-        return returnValue;
     }
 
     void draw(sf::RenderWindow& window) {
@@ -56,7 +50,7 @@ private:
     sf::Vector2f m_size;
     std::string m_textString;
     sf::Color m_color;
-    sf::Color m_colorHover = sf::Color::Green;
+    sf::Color m_colorHover;
     std::function<void()> m_onClick;
 };
 
@@ -100,7 +94,6 @@ public:
     virtual void ready() {
         texture.loadFromFile("res/entity.png");
         sprite.setTexture(texture);
-        sprite.setScale(sf::Vector2f(0.5f, 0.5f));
     }
 
     // defined below Game class because they use Game class functions
@@ -140,7 +133,8 @@ public:
     std::vector<Entity*> entityCollection;
 
     float FRAME_RATE = 60.f;
-    int GRID_SPACE = 50;
+    int GRID_SPACE = 100;
+    int GRID_ROWS = 9;
     int WINDOW_WIDTH;
     int WINDOW_HEIGHT;
 
@@ -148,15 +142,12 @@ public:
     sf::Clock frameClock;
     sf::Clock gameClock;
     sf::Font font;
-
     sf::Time delta;
-
-    int bananaCount = 0;
     int uniqueId = 0;
 
-    // true -> build; false -> destroy
-    bool destroyMode = false; // value should be adjusted with a "küderchübel" button to toggle build mode
-    Entity selectedPlant;
+    int bananaCount = 0;
+    int editMode = 0; // 0: sleep, 1: build, 2: destroy
+    int selectedPlant = 0;
 
     Game(sf::RenderWindow& window) : gameWindow(window) {
         WINDOW_WIDTH = gameWindow.getSize().x;
@@ -256,16 +247,19 @@ public:
         return false;
     }
 
-    void renderMouseSelection(const bool destroyMode){
-         sf::RectangleShape area;
+    void renderMouseSelection(){
+        if (editMode == 0)
+            return;
+        sf::RectangleShape area;
 
         // Set selection square pulsating color
         sf::Color areaColor;
-        if (destroyMode)
-            areaColor = sf::Color(255, 150, 150, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
-        else
-            areaColor = sf::Color(150, 150, 255, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
+        if (editMode == 2)
+            areaColor = sf::Color(255, 100, 100, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
+        else if(editMode == 1)
+            areaColor = sf::Color(120, 150, 255, sin(gameClock.getElapsedTime().asSeconds() * 5) * 100 + 150);
         area.setFillColor(areaColor);
+
         // Draw selection square
         area.setSize(sf::Vector2f(GRID_SPACE, GRID_SPACE));
         area.setPosition(snapOnGrid(mousePos.x),snapOnGrid(mousePos.y));
@@ -274,49 +268,95 @@ public:
 
     int placePlant();
 
-    void destroyPlant() {
+    void removePlant() {
         GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
 
         for (Entity* entity : getGridCollisions(gridPos, "plant")) {
             destroyEntity(entity->id);
         }
     }
-
+    
     bool startGame() {
         sf::Clock sleepClock;
-        Button cleverButton(sf::Vector2f(400.f, 600.f), sf::Vector2f(200.f, 100.f), "My Clever Button", sf::Color::Blue, []{ std::cout<<"clever Buton clicked function was executed :p"; });
+
+        Button destroyButton(sf::Vector2f(0.f, 920.f), sf::Vector2f(150.f, 80.f), "Remove", sf::Color(180, 50, 50), [this]{ 
+                editMode = 2;
+            });
+
+        Button plantButton(sf::Vector2f(250.f, 920.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{ 
+                editMode = 1;
+                selectedPlant = 0;
+            });
+
+        Button plant1Button(sf::Vector2f(400.f, 920.f), sf::Vector2f(125.f, 80.f), "Production\nPlant", sf::Color(50, 180, 50), [this]{ 
+                editMode = 1;
+                selectedPlant = 1;
+            });
+
+        Button plant2Button(sf::Vector2f(550.f, 920.f), sf::Vector2f(125.f, 80.f), "Plant x", sf::Color(50, 180, 50), [this]{ 
+                editMode = 1;
+                selectedPlant = 2;
+            });
+
+        sf::Text countText;
+        countText.setFont(font);
+        countText.setCharacterSize(24);
+        countText.setFillColor(sf::Color::Yellow);
+        countText.setPosition(10, 10);
 
         // Update game logic at FRAME_RATE
         while (gameWindow.isOpen()) {
             sleepClock.restart();
 
+            // poll input
             sf::Event event;
             while (gameWindow.pollEvent(event)) {
                 if (event.type == sf::Event::Closed)
                     gameWindow.close();
-                cleverButton.handleEvent(event, gameWindow);
+                destroyButton.handleEvent(event, gameWindow);
+                plantButton.handleEvent(event, gameWindow);
+                plant1Button.handleEvent(event, gameWindow);
+                plant2Button.handleEvent(event, gameWindow);
             }
-
             mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
             mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
 
             gameWindow.clear();
 
+            // make entities tick
             for (Entity* entity : entityCollection) {
                 entity->tick();
             }
 
-            renderMouseSelection(destroyMode);
-            if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
-                if (destroyMode) {
-                    destroyPlant();
-                } else {
-                    if (bananaCount >= 0)
-                        bananaCount -= placePlant();
+            // editing
+            if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+                editMode = 0;
+            if (mousePos.y < gridToFree(GRID_ROWS)) {
+                renderMouseSelection();
+                if (sf::Mouse::isButtonPressed(sf::Mouse::Left)) {
+                    if (editMode == 1) {
+                        int price = placePlant();
+                        if (bananaCount < price) {
+                            removePlant();
+                        } else {
+                            bananaCount -= price;
+                        }
+                    }
+                    else if (editMode == 2) {
+                        removePlant();
+                    }
                 }
             }
 
-            cleverButton.draw(gameWindow);
+            countText.setString("Banana Count: " + std::to_string(bananaCount));
+
+            // draw static elements
+            plantButton.draw(gameWindow);
+            destroyButton.draw(gameWindow);
+            plant1Button.draw(gameWindow);
+            plant2Button.draw(gameWindow);
+
+            gameWindow.draw(countText);
 
             gameWindow.display();
 
@@ -387,7 +427,6 @@ public:
 
         texture.loadFromFile("res/Zombie.png");
         sprite.setTexture(texture);
-        sprite.setScale(sf::Vector2f(0.5f, 0.5f));
 
         y = game->gridToFree(startingGridRow);
         x = game->WINDOW_WIDTH;
@@ -442,6 +481,7 @@ public:
     void ready() override {
         Entity::ready();
         group = "projectile";
+        sprite.setScale(0.7f, 0.7f);
 
         x = game->gridToFree(initGridPos.x);
         y = game->gridToFree(initGridPos.y) - 20.f;
@@ -482,10 +522,10 @@ public:
 
     void ready() override {
         group = "plant";
+        price = 2;
 
         texture.loadFromFile("res/Plant.png");
         sprite.setTexture(texture);
-        sprite.setScale(sf::Vector2f(0.5f, 0.5f));
 
         setGridPos(initGridPos);
     }
@@ -511,62 +551,87 @@ public:
 
 class ProductionPlant : public Plant {
 private:
-    float productionRate = 10.f;
+    float productionDelay = 5.f;
     float productionTimer = 0.f;
+    int productionAmount = 2;
 
 public:
     ProductionPlant(GridPos gridPos) : Plant(gridPos) {}
 
+    void ready() override {
+        Plant::ready();
+        price = 4;
+    }
+
     void tick() override {
         productionTimer += game->deltaTime();
-        if (productionTimer >= productionRate)
+        if (productionTimer >= productionDelay)
             produce();
 
         Entity::tick();
     }
 
     void produce() {
-        game->bananaCount += 1;
-        std::cout << "Banana produced!" << std::endl;
+        game->bananaCount += productionAmount;
         productionTimer = 0.f;
     }
 };
 
+
 int Game::placePlant() {
   GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
   if (!hasGridCollision(gridPos, "plant")) {
-      Plant* plant = new Plant(gridPos);
+      Plant* plant;
+      switch (selectedPlant) {
+        case 0:
+            plant = new Plant(gridPos);
+            break;
+        case 1:
+            plant = new ProductionPlant(gridPos);
+            break;
+        default:
+            plant = new Plant(gridPos);
+            break;
+      }
       createEntity(plant);
       return plant->price;
   }
   return 0;
 }
 
+
 // Entry point function
 int main() {
-    
-    sf::RenderWindow window(sf::VideoMode(1200, 800), "Protect The Jungle: monkeys fight back!");
+    sf::RenderWindow window(sf::VideoMode(1600, 1000), "Protect The Jungle: monkeys fight back!");
+
+    // sample menu
+    bool gameStartRequested = false;
+    Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested]{
+        gameStartRequested = true;
+    });
+    while (window.isOpen() && !gameStartRequested) {
+        sf::Event event;
+        while (window.pollEvent(event)) {
+            if (event.type == sf::Event::Closed)
+                window.close();
+            startGameButton.handleEvent(event, window);
+        }
+        window.clear();
+        startGameButton.draw(window);
+        window.display();
+        sf::sleep(sf::milliseconds(16));
+    }
+
     Game* game = new Game(window);
 
-    // display menu
-
     // add demo entitys
-    Plant* plant = new Plant(GridPos(2, 2));
-    game->createEntity(plant);
-
-    Plant* plant1 = new Plant(GridPos(1, 4));
-    game->createEntity(plant1);
-
     ProductionPlant* productionPlant = new ProductionPlant(GridPos(1,3));
     game->createEntity(productionPlant);
-
     Zombie* zombie = new Zombie(2);
     game->createEntity(zombie);
-
     Zombie* zombie1 = new Zombie(2);
     game->createEntity(zombie1);
     zombie1->x += 100.f;
-
     Zombie* zombie2 = new Zombie(4);
     game->createEntity(zombie2);
     zombie2->x += 200.f;
@@ -576,6 +641,5 @@ int main() {
     } else {
         // game lost
     }
-
     delete game;
 }
