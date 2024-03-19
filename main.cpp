@@ -4,10 +4,11 @@
 #include <cmath>
 #include <functional>
 
+
 class Button {
 public:
     Button(sf::Vector2f position, sf::Vector2f size, const std::string& text, const sf::Color& color, std::function<void()> onClick)
-        : m_position(position), m_size(size), m_textString(text), m_color(color), m_colorHover(color.r*1.3,color.g*1.3,color.b*1.3), m_onClick(onClick) {
+        : m_color(color), m_colorHover(color.r*1.3,color.g*1.3,color.b*1.3), m_onClick(onClick) {
         m_shape.setPosition(position);
         m_shape.setSize(size);
         m_shape.setFillColor(color);
@@ -46,13 +47,11 @@ private:
     sf::RectangleShape m_shape;
     sf::Text m_text;
     sf::Font m_font;
-    sf::Vector2f m_position;
-    sf::Vector2f m_size;
-    std::string m_textString;
     sf::Color m_color;
     sf::Color m_colorHover;
     std::function<void()> m_onClick;
 };
+
 
 struct GridPos {
     int x;
@@ -68,6 +67,7 @@ struct GridPos {
         return this->x <= gridPos.x && this->y == gridPos.y;
     }
 };
+
 
 // Every other game object (Entity) must inherit from this class 🏛️
 // It provides basic game object functionalities that are used a lot
@@ -103,10 +103,11 @@ public:
     void setGridPos(GridPos gridPos);
 };
 
+
 /*
 The Game class holds all game objects as entities (std::vector<Entity*> entityCollection) and makes them tick() 🐒
-It also offers commonly used functions and holds the game window (sf::RenderWindow& gameWindow)
-To access it's members in an Entity use game->handyFunction(x,y);
+It also offers commonly used functions and holds a reference to the game window (sf::RenderWindow& gameWindow) ✈️
+To access it's members in an Entity use the game pointer: game->handyFunction(x,y);
 
 Manage entities at runtime:
     int createEntity(Entity* entity)
@@ -279,6 +280,16 @@ public:
     bool startGame() {
         sf::Clock sleepClock;
 
+        sf::RectangleShape fieldBackground;
+        fieldBackground.setPosition(sf::Vector2f(0.f, 0.f));
+        fieldBackground.setSize(sf::Vector2f(2000.f, 2000.f));
+        fieldBackground.setFillColor(sf::Color(0, 20, 0));
+
+        sf::RectangleShape backgroundBar;
+        backgroundBar.setPosition(sf::Vector2f(0.f, 900.f));
+        backgroundBar.setSize(sf::Vector2f(2000.f,100.f));
+        backgroundBar.setFillColor(sf::Color(80,80,80));
+
         Button destroyButton(sf::Vector2f(0.f, 920.f), sf::Vector2f(150.f, 80.f), "Remove", sf::Color(180, 50, 50), [this]{ 
                 editMode = 2;
             });
@@ -293,16 +304,16 @@ public:
                 selectedPlant = 1;
             });
 
-        Button plant2Button(sf::Vector2f(550.f, 920.f), sf::Vector2f(125.f, 80.f), "Plant x", sf::Color(50, 180, 50), [this]{ 
+        Button plant2Button(sf::Vector2f(550.f, 920.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{ 
                 editMode = 1;
                 selectedPlant = 2;
             });
 
-        sf::Text countText;
-        countText.setFont(font);
-        countText.setCharacterSize(24);
-        countText.setFillColor(sf::Color::Yellow);
-        countText.setPosition(10, 10);
+        sf::Text bananasCountText;
+        bananasCountText.setFont(font);
+        bananasCountText.setCharacterSize(24);
+        bananasCountText.setFillColor(sf::Color::White);
+        bananasCountText.setPosition(10, 10);
 
         // Update game logic at FRAME_RATE
         while (gameWindow.isOpen()) {
@@ -322,6 +333,10 @@ public:
             mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
 
             gameWindow.clear();
+
+            // draw static elements
+            gameWindow.draw(fieldBackground);
+            gameWindow.draw(backgroundBar);
 
             // make entities tick
             for (Entity* entity : entityCollection) {
@@ -348,7 +363,7 @@ public:
                 }
             }
 
-            countText.setString("Banana Count: " + std::to_string(bananaCount));
+            bananasCountText.setString("Bananas to your name: " + std::to_string(bananaCount));
 
             // draw static elements
             plantButton.draw(gameWindow);
@@ -356,7 +371,7 @@ public:
             plant1Button.draw(gameWindow);
             plant2Button.draw(gameWindow);
 
-            gameWindow.draw(countText);
+            gameWindow.draw(bananasCountText);
 
             gameWindow.display();
 
@@ -605,7 +620,7 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(1600, 1000), "Protect The Jungle: monkeys fight back!");
 
     // sample menu
-    bool gameStartRequested = false;
+    bool gameStartRequested = true;
     Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested]{
         gameStartRequested = true;
     });

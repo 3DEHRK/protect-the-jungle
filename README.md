@@ -1,8 +1,16 @@
-# Protect The Jungle: monkeys fight back!
-## Sasa, Ribon, Nemo, Mango & Florian's idea of PvZ
+﻿# Protect The Jungle: monkeys fight back!
 
-### Required to build: gcc compiler -> https://filestash.gibb.ch/files/IET-Share/sh-classes/inf-306-21l/ -> Add Path Variable C:\mingw32\bin
-### SFML Docs: https://www.sfml-dev.org/tutorials/2.6
+#### Required to build: gcc compiler -> https://filestash.gibb.ch/files/IET-Share/sh-classes/inf-306-21l/ -> Add Path Variable C:\mingw32\bin
+#### SFML Docs: https://www.sfml-dev.org/tutorials/2.6
+
+<br/>
+
+## 🪁✨ Getting started 🚀🎯
+1. Check out the C++ Hints below
+2. Take a look at the Entity class (line ~80)
+3. See what functions the Game class offers by reading it's comments (line ~120)
+4. Get a glimpse of how exisitng game entities work (line ~420)
+5. Commit something & have fun! 💜
 
 <br/>
 
@@ -14,12 +22,13 @@
 
 <br/>
 
-## Zombie type ideas:
-### Flying
-### Lane-switching
-### ...
+## Ideas
 
-## Plant type ideas:
-### Slow down Zombie when hit
-### Freeze all zombie ticks for duration after a while
-### ...
+### Zombies
+1. Lane switching
+2. Piggypack
+3. ...
+
+### Plants
+1. Minion spawning
+2. ...
