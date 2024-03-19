@@ -6,10 +6,10 @@
 <br/>
 
 ## 🪁✨ Getting started 🚀🎯
-1. Check out the C++ Hints below
-2. Take a look at the Entity class (line ~80)
-3. See what functions the Game class offers by reading it's comments (line ~120)
-4. Get a glimpse of how exisitng game entities work (line ~420)
+1. Check out the C++ Hints below 💪
+2. Take a look at the Entity class (line ~80) 🤔
+3. See what functions the Game class offers by reading it's comments (line ~120) ☺️
+4. Get a glimpse of how exisitng game entities work (line ~420) 🤓👆
 5. Commit something & have fun! 💜
 
 <br/>
