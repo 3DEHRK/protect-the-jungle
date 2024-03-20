@@ -22,6 +22,10 @@
 
 <br/>
 
+![Alt Text](/uml/classes.svg)
+
+<br/>
+
 ## Ideas
 
 ### Zombies
