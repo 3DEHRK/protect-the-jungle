@@ -134,8 +134,8 @@ public:
     std::vector<Entity*> entityCollection;
 
     float FRAME_RATE = 60.f;
-    int GRID_SPACE = 100;
-    int GRID_ROWS = 9;
+    int GRID_SPACE = 84;
+    int GRID_ROWS = 8;
     int WINDOW_WIDTH;
     int WINDOW_HEIGHT;
 
@@ -280,31 +280,37 @@ public:
     bool startGame() {
         sf::Clock sleepClock;
 
-        sf::RectangleShape fieldBackground;
-        fieldBackground.setPosition(sf::Vector2f(0.f, 0.f));
-        fieldBackground.setSize(sf::Vector2f(2000.f, 2000.f));
-        fieldBackground.setFillColor(sf::Color(0, 20, 0));
+        sf::Texture fieldTexture;
+        if (!fieldTexture.loadFromFile("./res/bgGameField.png")) {
+            return EXIT_FAILURE;
+        }
+        sf::Sprite fieldSprite(fieldTexture);
+        fieldSprite.setPosition(sf::Vector2f(0.f, 0.f));
+        fieldSprite.setScale(5.27f, 5.27f);
 
-        sf::RectangleShape backgroundBar;
-        backgroundBar.setPosition(sf::Vector2f(0.f, 900.f));
-        backgroundBar.setSize(sf::Vector2f(2000.f,100.f));
-        backgroundBar.setFillColor(sf::Color(80,80,80));
+        sf::Texture barTexture;
+        if (!barTexture.loadFromFile("./res/bgActionBar.png")) {
+            return EXIT_FAILURE;
+        }
+        sf::Sprite barSprite(barTexture);
+        barSprite.setPosition(sf::Vector2f(0.f, 675.f));
+        barSprite.setScale(0.84,0.84);
 
-        Button destroyButton(sf::Vector2f(0.f, 920.f), sf::Vector2f(150.f, 80.f), "Remove", sf::Color(180, 50, 50), [this]{ 
+        Button destroyButton(sf::Vector2f(0.f, 720.f), sf::Vector2f(150.f, 80.f), "Remove", sf::Color(180, 50, 50), [this]{
                 editMode = 2;
             });
 
-        Button plantButton(sf::Vector2f(250.f, 920.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{ 
+        Button plantButton(sf::Vector2f(250.f, 720.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 0;
             });
 
-        Button plant1Button(sf::Vector2f(400.f, 920.f), sf::Vector2f(125.f, 80.f), "Production\nPlant", sf::Color(50, 180, 50), [this]{ 
+        Button plant1Button(sf::Vector2f(400.f, 720.f), sf::Vector2f(125.f, 80.f), "Production\nPlant", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 1;
             });
 
-        Button plant2Button(sf::Vector2f(550.f, 920.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{ 
+        Button plant2Button(sf::Vector2f(550.f, 720.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 2;
             });
@@ -335,8 +341,8 @@ public:
             gameWindow.clear();
 
             // draw static elements
-            gameWindow.draw(fieldBackground);
-            gameWindow.draw(backgroundBar);
+            gameWindow.draw(fieldSprite);
+            gameWindow.draw(barSprite);
 
             // make entities tick
             for (Entity* entity : entityCollection) {
@@ -617,7 +623,7 @@ int Game::placePlant() {
 
 // Entry point function
 int main() {
-    sf::RenderWindow window(sf::VideoMode(1600, 1000), "Protect The Jungle: monkeys fight back!");
+    sf::RenderWindow window(sf::VideoMode(1600, 837), "Protect The Jungle: monkeys fight back!");
 
     // sample menu
     bool gameStartRequested = true;

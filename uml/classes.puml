@@ -12,7 +12,7 @@ class Button {
     + draw(window: sf::RenderWindow&)
 }
 
-class GridPos {
+struct GridPos {
     - x: int
     - y: int
     + GridPos(x: int, y: int)
