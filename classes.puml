@@ -1,0 +1,129 @@
+@startuml
+
+class Button {
+    - m_shape: sf::RectangleShape
+    - m_text: sf::Text
+    - m_font: sf::Font
+    - m_color: sf::Color
+    - m_colorHover: sf::Color
+    - m_onClick: std::function<void()>
+    + Button(position: sf::Vector2f, size: sf::Vector2f, text: const std::string&, color: const sf::Color&, onClick: std::function<void()>)
+    + handleEvent(event: sf::Event, window: sf::RenderWindow&)
+    + draw(window: sf::RenderWindow&)
+}
+
+class GridPos {
+    - x: int
+    - y: int
+    + GridPos(x: int, y: int)
+    + equals(gridPos: GridPos): bool
+    + sameYBiggerX(gridPos: GridPos): bool
+}
+
+class Entity {
+    - x: int
+    - y: int
+    - xVel: float
+    - yVel: float
+    - health: float
+    - texture: sf::Texture
+    - sprite: sf::Sprite
+    - id: int
+    - group: std::string
+    - game: Game*
+    + ready(): void
+    + damage(d: float): bool
+    + tick(): void
+    + getGridPos(): GridPos
+    + setGridPos(gridPos: GridPos): void
+}
+
+class Game {
+    - gameWindow: sf::RenderWindow&
+    - entityCollection: std::vector<Entity*>
+    - FRAME_RATE: float
+    - GRID_SPACE: int
+    - GRID_ROWS: int
+    - WINDOW_WIDTH: int
+    - WINDOW_HEIGHT: int
+    - mousePos: sf::Vector2i
+    - frameClock: sf::Clock
+    - gameClock: sf::Clock
+    - font: sf::Font
+    - delta: sf::Time
+    - uniqueId: int
+    - bananaCount: int
+    - editMode: int
+    - selectedPlant: int
+    + Game(window: sf::RenderWindow&)
+    + ~Game()
+    + deltaTime(): float
+    + gridToFree(g: int): float
+    + freeToGrid(f: float): int
+    + snapOnGrid(v: float): float
+    + createEntity(entity: Entity*): int
+    + destroyEntity(entityId: int): void
+    + getCollisions(x: int, y: int, hitRadius: int, groupFilter: const std::string& = ""): std::vector<Entity*>
+    + getGridCollisions(collision: GridPos, groupFilter: const std::string& = ""): std::vector<Entity*>
+    + hasGridCollision(gridPos: GridPos, groupFilter: const std::string& = ""): bool
+    + hasZombieOnRowBefore(gridPos: GridPos): bool
+    + renderMouseSelection(): void
+    + placePlant(): int
+    + removePlant(): void
+    + startGame(): bool
+}
+
+class Zombie {
+    - knockback: float
+    - startingGridRow: int
+    - xVelNormal: float
+    - damageDonePerSec: float
+    + Zombie(startingGridRow: int)
+    + ready(): void
+    + damage(d: float): bool
+    + tick(): void
+    + getGridRow(): int
+    + getProgressLocation(): float
+}
+
+class Projectile {
+    - lifeSpan: float
+    - damageDone: int
+    - baseVelocity: float
+    - initGridPos: GridPos
+    - lifeTimer: float
+    + Projectile(gridPos: GridPos)
+    + ready(): void
+    + tick(): void
+}
+
+class Plant {
+    - attackSpeed: float
+    - attackTimer: float
+    - initGridPos: GridPos
+    + price: int
+    + Plant(gridPos: GridPos)
+    + ready(): void
+    + tick(): void
+}
+
+class ProductionPlant {
+    - productionDelay: float
+    - productionTimer: float
+    - productionAmount: int
+    + ProductionPlant(gridPos: GridPos)
+    + ready(): void
+    + tick(): void
+    + produce(): void
+}
+
+Entity --o Game
+GridPos --* Entity
+ProductionPlant --|> Plant
+Zombie --|> Entity
+Projectile --|> Entity
+Plant --|> Entity
+Button -- Game
+Plant o-- Projectile
+
+@enduml
