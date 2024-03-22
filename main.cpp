@@ -201,6 +201,9 @@ public:
     int selectedPlant = 0;
     int score = 0;
 
+    int waveCount = 0;
+    int zombieChance = 500;
+
     Game(sf::RenderWindow& window) : gameWindow(window) {
         WINDOW_WIDTH = gameWindow.getSize().x;
         WINDOW_HEIGHT = gameWindow.getSize().y;
@@ -338,6 +341,8 @@ public:
         return text;
     }
     
+    void createZombieDefault();
+
     bool startGame() {
         curlTest();
 
@@ -408,6 +413,29 @@ public:
             for (Entity* entity : entityCollection) {
                 entity->tick();
             }
+
+            // spöwns a sömbie every tick with 1 zu füfhundert chance.
+            if ((rand() % zombieChance + 1) == zombieChance) {
+                int whichZombieNumber = rand() % 100;
+                // pushing a default skin 75%
+                if(whichZombieNumber < 74) {
+                    createZombieDefault();
+                }
+                // 25 % für die andere looser
+
+            }
+            waveCount++;
+            // noch einerhalb minute hört wave uf
+            if(waveCount >= 5400) {
+                zombieChance = 500;
+                waveCount = 0;
+                
+            // after 1 minute fangt wave aa
+            }else if (waveCount >= 3600) {
+                // double spawn rate
+                zombieChance = 25;
+            }
+            
 
             // editing
             if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
@@ -502,6 +530,8 @@ protected:
     float xVelNormal = -100.f;
     float damageDonePerSec = 35.f;
     int scorePoints = 10;
+    int walkingAnimationCounter = 0;
+    int spawnChance = 200;
 
 public:
 
@@ -514,8 +544,10 @@ public:
     void ready() override {
         group = "zombie";
 
-        texture.loadFromFile("res/Zombie.png");
+        texture.loadFromFile("res/woodchoppaaa.png");
         sprite.setTexture(texture);
+        sprite.setScale(100/32, 100/32);
+        sprite.setOrigin(sprite.getLocalBounds().width / 2.f, sprite.getLocalBounds().height / 2.f);
 
         y = game->gridToFree(startingGridRow);
         x = game->WINDOW_WIDTH;
@@ -548,6 +580,18 @@ public:
         if (knockback > 0.f)
             knockback -= game->deltaTime() * 15.f;
 
+        if(walkingAnimationCounter == 40) {
+            sprite.setRotation(-10.f);
+        
+        }
+
+        if(walkingAnimationCounter == 80) {
+            sprite.setRotation(10.f);
+            walkingAnimationCounter = 0;
+        
+        }
+        walkingAnimationCounter++;
+
         // Always call Entity's tick
         Entity::tick();
     }
@@ -571,9 +615,10 @@ public:
     Projectile(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
-        Entity::ready();
         group = "projectile";
-        sprite.setScale(0.7f, 0.7f);
+        texture.loadFromFile("res/stonee.png");
+        sprite.setTexture(texture);
+        sprite.setScale(100/32, 100/32);
 
         x = game->gridToFree(initGridPos.x);
         y = game->gridToFree(initGridPos.y) - 20.f;
@@ -620,8 +665,9 @@ public:
         group = "plant";
         price = 2;
 
-        texture.loadFromFile("res/Plant.png");
+        texture.loadFromFile("res/mongii.png");
         sprite.setTexture(texture);
+        sprite.setScale(100/32, 100/32);
 
         setGridPos(initGridPos);
     }
@@ -695,6 +741,11 @@ int Game::placePlant() {
   return 0;
 }
 
+void Game::createZombieDefault() {
+    Zombie* zombie = new Zombie(rand() % 8);
+    createEntity(zombie);  
+}
+
 
 // Entry point function
 int main() {
@@ -723,14 +774,6 @@ int main() {
     // add demo entitys
     ProductionPlant* productionPlant = new ProductionPlant(GridPos(1,3));
     game->createEntity(productionPlant);
-    Zombie* zombie = new Zombie(2);
-    game->createEntity(zombie);
-    Zombie* zombie1 = new Zombie(2);
-    game->createEntity(zombie1);
-    zombie1->x += 100.f;
-    Zombie* zombie2 = new Zombie(4);
-    game->createEntity(zombie2);
-    zombie2->x += 200.f;
 
     if (game->startGame()) {
         // victory
