@@ -3,6 +3,56 @@
 #include <vector>
 #include <cmath>
 #include <functional>
+#include <curl/curl.h>
+
+
+// Callback function to write received data into a string
+size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
+    size_t total_size = size * nmemb;
+    buffer->append((char*)contents, total_size);
+    return total_size;
+}
+
+void curlTest() {
+    CURL* curl;
+    CURLcode res;
+    std::string buffer;
+
+    // Initialize libcurl
+    curl_global_init(CURL_GLOBAL_ALL);
+    curl = curl_easy_init();
+    if (curl) {
+        // Set the URL for the request
+        curl_easy_setopt(curl, CURLOPT_URL, "https://api.exchangerate-api.com/v4/latest/USD");
+
+        // Set SSL options to disable certificate verification
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
+        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+
+        // Set the callback function to receive the response
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+
+        // Perform the request
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
+        }
+        else {
+            // Print the received data (response)
+            std::cout << "Response:\n" << buffer << std::endl;
+        }
+
+        // Cleanup
+        curl_easy_cleanup(curl);
+    }
+    else {
+        std::cerr << "Failed to initialize libcurl" << std::endl;
+    }
+
+    // Cleanup global libcurl state
+    curl_global_cleanup();
+}
 
 
 class Button {
@@ -278,6 +328,8 @@ public:
     }
     
     bool startGame() {
+        curlTest();
+
         sf::Clock sleepClock;
 
         sf::Texture fieldTexture;
