@@ -58,17 +58,22 @@ function storeScore($score){
         $insert = "INSERT INTO score (name, score) VALUES ('$name', $score)";
         $res = mysqli_query($conn, $insert);
         $id = mysqli_insert_id($conn);
-        $query = "SELECT RANK() OVER (ORDER BY score DESC) AS rank FROM score WHERE id = '$id'";
+        $query = "SELECT id, RANK() OVER (ORDER BY score DESC) AS rank FROM score";
         $query_run = mysqli_query($conn, $query);
-        $rank = mysqli_fetch_all($query_run);
-        $rankValue = isset($rank[0][0]) ? $rank[0][0] : '';
+        $ranks = mysqli_fetch_all($query_run);
+
+        foreach ($ranks as $rank){
+            if ($rank[0] == $id) {
+                $resultRank = $rank[1];
+            }
+        }
 
         if ($res) {
             $data = [
                     'status' => 201,
                     'message' => 'Scores Created Successfully',
                     'data' => [
-                        'rank' => $rankValue
+                        'rank' => $resultRank
                     ]
                 ];
             header("HTTP/1.0. 201 Created");
