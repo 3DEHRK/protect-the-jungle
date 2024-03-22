@@ -199,6 +199,7 @@ public:
     int bananaCount = 0;
     int editMode = 0; // 0: sleep, 1: build, 2: destroy
     int selectedPlant = 0;
+    int score = 0;
 
     Game(sf::RenderWindow& window) : gameWindow(window) {
         WINDOW_WIDTH = gameWindow.getSize().x;
@@ -326,6 +327,16 @@ public:
             destroyEntity(entity->id);
         }
     }
+
+    sf::Text generateText(int x, int y) {
+        sf::Text text;
+        text.setFont(font);
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
+        text.setPosition(x, y);
+
+        return text;
+    }
     
     bool startGame() {
         curlTest();
@@ -367,11 +378,8 @@ public:
                 selectedPlant = 2;
             });
 
-        sf::Text bananasCountText;
-        bananasCountText.setFont(font);
-        bananasCountText.setCharacterSize(24);
-        bananasCountText.setFillColor(sf::Color::White);
-        bananasCountText.setPosition(10, 10);
+        sf::Text bananasCountText = generateText(10, 10);
+        sf::Text scoreText = generateText(500, 10);
 
         // Update game logic at FRAME_RATE
         while (gameWindow.isOpen()) {
@@ -422,14 +430,16 @@ public:
             }
 
             bananasCountText.setString("Bananas to your name: " + std::to_string(bananaCount));
+            scoreText.setString("Your score: " + std::to_string(score));
 
             // draw static elements
+            gameWindow.draw(bananasCountText);
+            gameWindow.draw(scoreText);
+
             plantButton.draw(gameWindow);
             destroyButton.draw(gameWindow);
             plant1Button.draw(gameWindow);
             plant2Button.draw(gameWindow);
-
-            gameWindow.draw(bananasCountText);
 
             gameWindow.display();
 
@@ -491,8 +501,14 @@ protected:
     int startingGridRow = 1;
     float xVelNormal = -100.f;
     float damageDonePerSec = 35.f;
+    int scorePoints = 10;
 
 public:
+
+    int getScorePoints() {
+        return scorePoints;
+    }
+
     Zombie(int startingGridRow) : startingGridRow(startingGridRow) {}
 
     void ready() override {
@@ -519,7 +535,10 @@ public:
             xVel = 0.f;
             std::vector<Entity*> collisions = game->getGridCollisions(getGridPos(), "plant");
             for (Entity* hit : collisions) {
-                hit->damage(damageDonePerSec * game->deltaTime());
+                bool isDead = hit->damage(damageDonePerSec * game->deltaTime());
+                if (isDead) {
+                     game->score += scorePoints;
+                }
             }
         } else {
             xVel = xVelNormal;
@@ -573,7 +592,11 @@ public:
         // check for colliding zombies; damage & destroy self
         std::vector<Entity*> hits = game->getCollisions(x, y, 25.f, "zombie");
         for (Entity* zombie : hits) {
-            zombie->damage(damageDone);
+            bool isZombieDead = zombie->damage(damageDone);
+            if (isZombieDead) {
+                Zombie* realZombie = dynamic_cast<Zombie*>(zombie);
+                game->score += realZombie->getScorePoints();
+            }
             game->destroyEntity(id);
         }
 
