@@ -4,7 +4,7 @@
 #include <cmath>
 #include <functional>
 #include <curl/curl.h>
-
+#include <sstream>
 
 // Callback function to write received data into a string
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
@@ -16,41 +16,57 @@ size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buf
 void curlTest() {
     CURL* curl;
     CURLcode res;
-    std::string buffer;
+    std::string readBuffer;
 
     // Initialize libcurl
-    curl_global_init(CURL_GLOBAL_ALL);
+    curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-    if (curl) {
-        // Set the URL for the request
-        curl_easy_setopt(curl, CURLOPT_URL, "https://api.exchangerate-api.com/v4/latest/USD");
 
-        // Set SSL options to disable certificate verification
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0L);
-        curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0L);
+    if(curl) {
+        // Set the URL
+        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/test/score/create.php");
+        std::cout << "Set the URL" << std::endl;
+        // Set the HTTP method to POST
+        curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        std::cout << "Set the HTTP method to POST" << std::endl;
 
-        // Set the callback function to receive the response
+        // Set the headers to indicate JSON data
+        struct curl_slist* headers = NULL;
+        headers = curl_slist_append(headers, "Content-Type: application/json");
+        curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
+        std::cout << "Set the headers to indicate JSON data" << std::endl;
+
+        std::string name = "hihi";
+        int score = 87234;
+
+        // Set the POST data using std::format
+        std::ostringstream postDataStream;
+        postDataStream << R"({"name": ")" << name << R"(","score": ")" << score << "\"}";
+        std::string postData = postDataStream.str();
+        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
+        std::cout << "Set the POST data to: " << postData << std::endl;
+
+        // Set the write callback function
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        std::cout << "Set the write callback function" << std::endl;
 
         // Perform the request
         res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            std::cerr << "curl_easy_perform() failed: " << curl_easy_strerror(res) << std::endl;
-        }
-        else {
-            // Print the received data (response)
-            std::cout << "Response:\n" << buffer << std::endl;
+        std::cout << "Perform the request" << std::endl;
+
+        // Check for errors
+        if(res != CURLE_OK) {
+            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+        } else {
+            std::cout << "Response: " << readBuffer << std::endl;
         }
 
-        // Cleanup
+        // Clean up
         curl_easy_cleanup(curl);
-    }
-    else {
-        std::cerr << "Failed to initialize libcurl" << std::endl;
+        curl_slist_free_all(headers);
     }
 
-    // Cleanup global libcurl state
     curl_global_cleanup();
 }
 
@@ -201,6 +217,8 @@ public:
     int selectedPlant = 0;
     int score = 0;
 
+    bool isGameOver = false;
+
     int waveCount = 0;
     int zombieChance = 500;
 
@@ -331,7 +349,12 @@ public:
         }
     }
 
+    void createZombieDefault();
+
     sf::Text generateText(int x, int y) {
+//        sf::Font m_font;
+//        m_font.loadFromFile("res/arial.ttf");
+
         sf::Text text;
         text.setFont(font);
         text.setCharacterSize(24);
@@ -340,11 +363,9 @@ public:
 
         return text;
     }
-    
-    void createZombieDefault();
 
     bool startGame() {
-        curlTest();
+        // curlTest();
 
         sf::Clock sleepClock;
 
@@ -408,6 +429,10 @@ public:
             // draw static elements
             gameWindow.draw(fieldSprite);
             gameWindow.draw(barSprite);
+
+            if (isGameOver) {
+                return false;
+            }
 
             // make entities tick
             for (Entity* entity : entityCollection) {
@@ -591,7 +616,10 @@ public:
         
         }
         walkingAnimationCounter++;
-
+        if (getGridPos().x < 0) {
+            std::cout << "game over" << std::endl;
+            game->isGameOver = true;
+        }
         // Always call Entity's tick
         Entity::tick();
     }
@@ -790,15 +818,15 @@ void Game::createZombieDefault() {
     createEntity(zombie);  
 }
 
-
 // Entry point function
 int main() {
     sf::RenderWindow window(sf::VideoMode(1600, 837), "Protect The Jungle: monkeys fight back!");
 
     // sample menu
-    bool gameStartRequested = true;
+    bool gameStartRequested = false;
     Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested]{
         gameStartRequested = true;
+        std::cout << "Start game" << std::endl;
     });
     while (window.isOpen() && !gameStartRequested) {
         sf::Event event;
@@ -815,14 +843,52 @@ int main() {
 
     Game* game = new Game(window);
 
-    // add demo entitys
-    ProductionPlant* productionPlant = new ProductionPlant(GridPos(1,3));
-    game->createEntity(productionPlant);
 
-    if (game->startGame()) {
-        // victory
-    } else {
-        // game lost
+    while (game->gameWindow.isOpen()) {
+
+        // add demo entitys
+        ProductionPlant* productionPlant = new ProductionPlant(GridPos(1,3));
+        game->createEntity(productionPlant);
+
+        bool isWon = game->startGame();
+        if (isWon) {
+            // victory wirds das über haupt gä?!?!?!?! (I <3 GIBB)
+        } else {
+            sf::Texture texture;
+            sf::Sprite sprite;
+            texture.loadFromFile("res/bgMenu.png");
+            sprite.setTexture(texture);
+
+            sf::Vector2u windowSize = game->gameWindow.getSize();
+            sf::Vector2u spriteSize = texture.getSize();
+            double centeredX = (windowSize.x / 2) - (spriteSize.x / 2);
+            double centeredY = (windowSize.y / 2) - (spriteSize.y / 2);
+            sprite.setPosition(centeredX, centeredY);
+
+
+            bool gameRestartRequested = false;
+            Button restartGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Restart", sf::Color(180, 100, 180), [&gameRestartRequested]{
+                gameRestartRequested = true;
+                std::cout << "Game Restarted" << std::endl;
+            });
+            sf::Text score = game->generateText(650, 350);
+            score.setString("Ur score is: " + std::to_string(game->score));
+            game->gameWindow.draw(sprite);
+            game->gameWindow.draw(score);
+            restartGameButton.draw(game->gameWindow);
+            std::cout << "Drew bgMenu" << std::endl;
+
+            game->gameWindow.display();
+            while (window.isOpen() && !gameRestartRequested) {
+               sf::Event event;
+               while (game->gameWindow.pollEvent(event)) {
+                   if (event.type == sf::Event::Closed)
+                       game->gameWindow.close();
+                   restartGameButton.handleEvent(event, game->gameWindow);
+               }
+               sf::sleep(sf::milliseconds(16));
+           }
+            game = new Game(window);
+        }
     }
-    delete game;
 }
