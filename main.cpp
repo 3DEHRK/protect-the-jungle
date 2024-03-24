@@ -772,7 +772,7 @@ public:
         texture.loadFromFile("res/tankmongii1.png");
         if (health <= 666)
             texture.loadFromFile("res/tankmongii2.png");
-        else if (health <= 333)
+        if (health <= 333)
             texture.loadFromFile("res/tankmongii3.png");
         Entity::tick();
     }
