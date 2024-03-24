@@ -145,6 +145,7 @@ public:
     float xVel = 0;
     float yVel = 0;
     float health = 100;
+    float topHealth = 100;
 
     sf::Texture texture;
     sf::Sprite sprite;
@@ -212,7 +213,7 @@ public:
     sf::Time delta;
     int uniqueId = 0;
 
-    int bananaCount = 0;
+    int bananaCount = 1;
     int editMode = 0; // 0: sleep, 1: build, 2: destroy
     int selectedPlant = 0;
     int score = 0;
@@ -385,23 +386,28 @@ public:
         barSprite.setPosition(sf::Vector2f(0.f, 675.f));
         barSprite.setScale(0.84,0.84);
 
-        Button destroyButton(sf::Vector2f(0.f, 720.f), sf::Vector2f(150.f, 80.f), "Remove", sf::Color(180, 50, 50), [this]{
+        Button destroyButton(sf::Vector2f(0.f, 720.f), sf::Vector2f(150.f, 80.f), "Demobilize", sf::Color(180, 50, 50), [this]{
                 editMode = 2;
             });
 
-        Button plantButton(sf::Vector2f(250.f, 720.f), sf::Vector2f(125.f, 80.f), "Plant", sf::Color(50, 180, 50), [this]{
+        Button plantButton(sf::Vector2f(250.f, 720.f), sf::Vector2f(125.f, 80.f), "Mongii", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 0;
             });
 
-        Button plant1Button(sf::Vector2f(400.f, 720.f), sf::Vector2f(125.f, 80.f), "Production\nPlant", sf::Color(50, 180, 50), [this]{
+        Button plant1Button(sf::Vector2f(400.f, 720.f), sf::Vector2f(125.f, 80.f), "Production\nMongii", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 1;
             });
 
-        Button plant2Button(sf::Vector2f(550.f, 720.f), sf::Vector2f(125.f, 80.f), "Tank\nPlant", sf::Color(50, 180, 50), [this]{
+        Button plant2Button(sf::Vector2f(550.f, 720.f), sf::Vector2f(125.f, 80.f), "Tank\nMongii", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 2;
+            });
+
+        Button plant3Button(sf::Vector2f(700.f, 720.f), sf::Vector2f(125.f, 80.f), "Medical\nMongii", sf::Color(50, 180, 50), [this]{
+                editMode = 1;
+                selectedPlant = 3;
             });
 
         sf::Text bananasCountText = generateText(10, 10);
@@ -420,6 +426,7 @@ public:
                 plantButton.handleEvent(event, gameWindow);
                 plant1Button.handleEvent(event, gameWindow);
                 plant2Button.handleEvent(event, gameWindow);
+                plant3Button.handleEvent(event, gameWindow);
             }
             mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
             mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
@@ -493,6 +500,7 @@ public:
             destroyButton.draw(gameWindow);
             plant1Button.draw(gameWindow);
             plant2Button.draw(gameWindow);
+            plant3Button.draw(gameWindow);
 
             gameWindow.display();
 
@@ -761,7 +769,8 @@ public:
     void ready() override {
         Plant::ready();
         price = 4;
-        health = 1000;
+        topHealth = 1000;
+        health = topHealth;
 
         texture.loadFromFile("res/tankmongii1.png");
         sprite.setTexture(texture);
@@ -789,6 +798,108 @@ public:
     }
 };
 
+class MendingPlant : public Plant {
+private:
+    Entity* target = nullptr;
+    float healingSpeed = 0.5f;
+    float healthPerAppointment = 30.f;
+    float healthDelt = 0;
+    float movementSpeed = 100.f;
+
+    float idleTimer = 2.f;
+    Entity* lastPatient = nullptr;
+
+    sf::Texture texture1;
+
+    Entity* findTarget() {
+        for (Entity* test : game->entityCollection) {   //todo:shuffle
+            if (test->group == "plant" &&
+                test != lastPatient &&
+                test->health < test->topHealth &&
+                test != this) {
+                //std::cout<<"target found"<<std::endl;
+                idleTimer = 2.f + rand() / RAND_MAX;
+                return test;
+            }
+        }
+        //std::cout<<"no target found"<<std::endl;
+        return nullptr;
+    }
+
+    bool moveToTarget() {
+        float tolerance = 20.f;
+        if (tolerance >= std::abs(x - target->x) && tolerance >= std::abs(y - target->y)) {
+            //std::cout<<"there :)"<<std::endl;
+            xVel = 0.f;
+            yVel = 0.f;
+            return true;
+        } else {
+            //std::cout<<"moving"<<std::endl;
+            if (tolerance <= std::abs(x - target->x)) {
+                if (x - target->x < 0.f)
+                    xVel = movementSpeed;
+                else
+                    xVel = -movementSpeed;
+            } else {
+                xVel = 0.f;
+            }
+            if (tolerance <= std::abs(y - target->y)) {
+                if (y - target->y < 0.f)
+                    yVel = movementSpeed;
+                else
+                    yVel = -movementSpeed;
+            } else {
+                yVel = 0.f;
+            }
+
+            if(xVel < 0.f)
+                sprite.setTexture(texture1);
+            else
+                sprite.setTexture(texture);
+        }
+        return false;
+    }
+
+    bool healTarget() {
+        target->health += healingSpeed;
+        healthDelt += healingSpeed;
+
+        if (healthDelt > healthPerAppointment) {
+            lastPatient = target;
+            healthDelt = 0;
+            return true;
+        }
+        return false;
+    }
+public:
+    MendingPlant(GridPos gridPos) : Plant(gridPos) {}
+
+    void ready() override {
+        Plant::ready();
+        price = 6;
+
+        texture1.loadFromFile("res/mendingMongii1.png");
+        texture.loadFromFile("res/mendingMongii.png");
+        sprite.setTexture(texture);
+    }
+
+    void tick() override {
+        if (idleTimer < 0.f) {
+            if (target == nullptr) {
+                target = findTarget();
+            } else {
+                if (moveToTarget())
+                    if(healTarget())
+                        target = findTarget();
+            }
+        } else {
+            idleTimer -= game->deltaTime();
+        }
+
+        Entity::tick();
+    }
+};
+
 int Game::placePlant() {
   GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
   if (!hasGridCollision(gridPos, "plant")) {
@@ -802,6 +913,9 @@ int Game::placePlant() {
             break;
         case 2:
             plant = new TankPlant(gridPos);
+            break;
+        case 3:
+            plant = new MendingPlant(gridPos);
             break;
         default:
             plant = new Plant(gridPos);
