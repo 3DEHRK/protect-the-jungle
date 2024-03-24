@@ -5,6 +5,7 @@
 #include <functional>
 #include <curl/curl.h>
 #include <sstream>
+#include <time.h>
 
 // Callback function to write received data into a string
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
@@ -367,6 +368,8 @@ public:
 
     bool startGame() {
         // curlTest();
+
+        srand(time(NULL));
 
         sf::Clock sleepClock;
 
