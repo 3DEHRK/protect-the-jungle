@@ -213,7 +213,7 @@ public:
     sf::Time delta;
     int uniqueId = 0;
 
-    int bananaCount = 1;
+    int bananaCount = 1000;
     int editMode = 0; // 0: sleep, 1: build, 2: destroy
     int selectedPlant = 0;
     int score = 0;
@@ -520,17 +520,10 @@ void Entity::tick() {
     sprite.setPosition(x, y);
     game->gameWindow.draw(sprite);
 
-    //debugging info (to be removed)
-    sf::Text groupText;
-    groupText.setFont(game->font);
-    groupText.setString(group);
-    groupText.setCharacterSize(20);
-    groupText.setPosition(x, y);
-    game->gameWindow.draw(groupText);
     sf::Text healthText;
     healthText.setFont(game->font);
     healthText.setString(std::to_string((int)health));
-    healthText.setCharacterSize(16);
+    healthText.setCharacterSize(14);
     healthText.setPosition(x, y + 20.f);
     game->gameWindow.draw(healthText);
 }
@@ -731,14 +724,14 @@ class ProductionPlant : public Plant {
 private:
     float productionDelay = 5.f;
     float productionTimer = 0.f;
-    int productionAmount = 2;
+    int productionAmount = 1.f;
 
 public:
     ProductionPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
         Plant::ready();
-        price = 4;
+        price = 5;
 
         texture.loadFromFile("res/production-mongii.png");
         sprite.setTexture(texture);
@@ -760,8 +753,6 @@ public:
 };
 
 class TankPlant : public Plant {
-private:
-    int damageState = 0;
 
 public:
     TankPlant(GridPos gridPos) : Plant(gridPos) {}
@@ -778,22 +769,11 @@ public:
     }
 
     void tick() override {
-        switch (damageState) {
-            case 0:
-                if (health <= 666) {
-                    texture.loadFromFile("res/tankmongii2.png");
-                    sprite.setTexture(texture);
-                    sprite.setScale(100/32, 100/32);
-                    damageState = 1;
-                }
-            case 1:
-                if (health <= 333) {
-                    texture.loadFromFile("res/tankmongii3.png");
-                    sprite.setTexture(texture);
-                    sprite.setScale(100/32, 100/32);
-                    damageState = 2;
-                }
-        }
+        texture.loadFromFile("res/tankmongii1.png");
+        if (health <= 666)
+            texture.loadFromFile("res/tankmongii2.png");
+        else if (health <= 333)
+            texture.loadFromFile("res/tankmongii3.png");
         Entity::tick();
     }
 };
@@ -839,7 +819,7 @@ private:
                 if (x - target->x < 0.f)
                     xVel = movementSpeed;
                 else
-                    xVel = -movementSpeed;
+                    xVel = -1.f * movementSpeed;
             } else {
                 xVel = 0.f;
             }
@@ -847,7 +827,7 @@ private:
                 if (y - target->y < 0.f)
                     yVel = movementSpeed;
                 else
-                    yVel = -movementSpeed;
+                    yVel = -1.f * movementSpeed;
             } else {
                 yVel = 0.f;
             }
