@@ -5,7 +5,7 @@ require '../inc/dbcon.php';
 function getAllScores(){
 
     global $conn;
-    $query = "SELECT name, score, RANK() OVER (ORDER BY score DESC) AS rank FROM score";
+    $query = "SELECT name, score, RANK() OVER (ORDER BY score DESC) AS 'rank' FROM score";
     $query_run = mysqli_query($conn,$query);
 
     if($query_run){
@@ -58,7 +58,7 @@ function storeScore($score){
         $insert = "INSERT INTO score (name, score) VALUES ('$name', $score)";
         $res = mysqli_query($conn, $insert);
         $id = mysqli_insert_id($conn);
-        $query = "SELECT id, RANK() OVER (ORDER BY score DESC) AS rank FROM score";
+        $query = "SELECT id, RANK() OVER (ORDER BY score DESC) AS 'rank' FROM score";
         $query_run = mysqli_query($conn, $query);
         $ranks = mysqli_fetch_all($query_run);
 

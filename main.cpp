@@ -6,6 +6,7 @@
 #include <curl/curl.h>
 #include <sstream>
 #include <time.h>
+#include <regex>
 
 // Callback function to write received data into a string
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
@@ -14,7 +15,21 @@ size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buf
     return total_size;
 }
 
-void curlTest() {
+int extractStatusCode(const std::string& jsonString) {
+    std::regex statusCodePattern(R"("status":(\d+))");
+    std::smatch matches;
+
+    if (std::regex_search(jsonString, matches, statusCodePattern) && matches.size() > 1) {
+        // The status code is in the second capture group
+        return std::stoi(matches[1].str());
+    }
+
+    // Return a default value or handle the error as needed
+    return -1; // Indicates that the status code was not found
+}
+
+// return false on unsuccessful request <3
+bool saveScore(std::string name, int score) {
     CURL* curl;
     CURLcode res;
     std::string readBuffer;
@@ -22,10 +37,10 @@ void curlTest() {
     // Initialize libcurl
     curl_global_init(CURL_GLOBAL_DEFAULT);
     curl = curl_easy_init();
-
+    bool isRequestSuccessful;
     if(curl) {
         // Set the URL
-        curl_easy_setopt(curl, CURLOPT_URL, "http://localhost/test/score/create.php");
+        curl_easy_setopt(curl, CURLOPT_URL, "http://marco.jaros.ch/score/create.php");
         std::cout << "Set the URL" << std::endl;
         // Set the HTTP method to POST
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
@@ -36,9 +51,6 @@ void curlTest() {
         headers = curl_slist_append(headers, "Content-Type: application/json");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         std::cout << "Set the headers to indicate JSON data" << std::endl;
-
-        std::string name = "hihi";
-        int score = 87234;
 
         // Set the POST data using std::format
         std::ostringstream postDataStream;
@@ -59,8 +71,11 @@ void curlTest() {
         // Check for errors
         if(res != CURLE_OK) {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            isRequestSuccessful = false;
         } else {
             std::cout << "Response: " << readBuffer << std::endl;
+            int statusCode = extractStatusCode(readBuffer);
+            isRequestSuccessful = statusCode == 201;
         }
 
         // Clean up
@@ -69,6 +84,7 @@ void curlTest() {
     }
 
     curl_global_cleanup();
+    return isRequestSuccessful;
 }
 
 
@@ -596,10 +612,7 @@ public:
             xVel = 0.f;
             std::vector<Entity*> collisions = game->getGridCollisions(getGridPos(), "plant");
             for (Entity* hit : collisions) {
-                bool isDead = hit->damage(damageDonePerSec * game->deltaTime());
-                if (isDead) {
-                     game->score += scorePoints;
-                }
+                hit->damage(damageDonePerSec * game->deltaTime());
             }
         } else {
             xVel = xVelNormal;
@@ -940,7 +953,6 @@ int main() {
 
     Game* game = new Game(window);
 
-
     while (game->gameWindow.isOpen()) {
 
         // add demo entitys
@@ -951,6 +963,7 @@ int main() {
         if (isWon) {
             // victory wirds das über haupt gä?!?!?!?! (I <3 GIBB)
         } else {
+            bool isSaved = false;
             sf::Texture texture;
             sf::Sprite sprite;
             texture.loadFromFile("res/bgMenu.png");
@@ -968,23 +981,56 @@ int main() {
                 gameRestartRequested = true;
                 std::cout << "Game Restarted" << std::endl;
             });
-            sf::Text score = game->generateText(650, 350);
-            score.setString("Ur score is: " + std::to_string(game->score));
-            game->gameWindow.draw(sprite);
-            game->gameWindow.draw(score);
-            restartGameButton.draw(game->gameWindow);
-            std::cout << "Drew bgMenu" << std::endl;
 
-            game->gameWindow.display();
+            bool saveScoreRequested = false;
+            Button saveScoreButton(sf::Vector2f(1100.f, 450.f), sf::Vector2f(150.f, 100.f), "Save Score", sf::Color(180, 100, 180), [&saveScoreRequested, &isSaved]{
+                if (!isSaved) {
+                    saveScoreRequested = true;
+                    std::cout << "Score Saved" << std::endl;
+                }
+            });
+
+            sf::Text scoreText = game->generateText(650, 350);
+            scoreText.setString("Your score: " + std::to_string(game->score));
+            sf::Text playerText = game->generateText(650, 200);
+
+            sf::String lastPlayerInput;
+            sf::String playerInput;
+            int keyDebounceCounter = 0;
             while (window.isOpen() && !gameRestartRequested) {
-               sf::Event event;
-               while (game->gameWindow.pollEvent(event)) {
-                   if (event.type == sf::Event::Closed)
-                       game->gameWindow.close();
-                   restartGameButton.handleEvent(event, game->gameWindow);
-               }
-               sf::sleep(sf::milliseconds(16));
-           }
+                sf::Event event;
+                while (window.pollEvent(event)) {
+                    if (event.type == sf::Event::Closed)
+                        window.close();
+                    restartGameButton.handleEvent(event, window);
+                    saveScoreButton.handleEvent(event, window);
+                }
+                window.clear();
+
+                if (event.type == sf::Event::TextEntered)
+                {
+                    if ((event.text.unicode != lastPlayerInput || keyDebounceCounter >= 8) && playerInput.toAnsiString().length() <= 32) {
+                        playerInput += event.text.unicode;
+                        lastPlayerInput = event.text.unicode;
+                        playerText.setString(playerInput);
+                        keyDebounceCounter = 0;
+                    }
+                }
+
+                if (saveScoreRequested) {
+                    isSaved = saveScore(playerInput.toAnsiString(), game->score);
+                    saveScoreRequested = false;
+                }
+
+                window.draw(sprite);
+                window.draw(scoreText);
+                window.draw(playerText);
+                restartGameButton.draw(window);
+                saveScoreButton.draw(window);
+                window.display();
+                keyDebounceCounter++;
+                sf::sleep(sf::milliseconds(20));
+            }
             game = new Game(window);
         }
     }
