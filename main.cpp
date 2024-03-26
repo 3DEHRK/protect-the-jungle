@@ -266,8 +266,7 @@ public:
         }
         entityCollection.clear();
 
-        // fix thread sleep stutters on windows:
-        // SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
+        SetPriorityClass(GetCurrentProcess(), HIGH_PRIORITY_CLASS);
     }
 
     ~Game() {
@@ -814,22 +813,22 @@ private:
     Entity* target = nullptr;
     float healingSpeed = 0.5f;
     float healthPerAppointment = 30.f;
+    float healthOverload = 20.f;
+
     float healthDelt = 0;
     float movementSpeed = 100.f;
-
     float idleTimer = 2.f;
-    Entity* lastPatient = nullptr;
 
     sf::Texture texture1;
 
     Entity* findTarget() {
         std::vector<Entity*> entitiesShuffled = game->entityCollection;
-        std::shuffle(entitiesShuffled.begin(), entitiesShuffled.end(), std::default_random_engine{});
-        for (Entity* test : game->entityCollection) {
-            if (test->group == "plant" &&
-                test != lastPatient &&
-                test->health < test->topHealth &&
-                test != this) {
+        std::random_device rd;
+        std::mt19937 randomEngine(rd());
+        std::shuffle(entitiesShuffled.begin(), entitiesShuffled.end(), randomEngine);
+
+        for (Entity* test : entitiesShuffled) {
+            if (test->group == "plant" && test->health < test->topHealth && test != this) {
                 idleTimer = 2.f + rand() / RAND_MAX;
                 return test;
             }
@@ -873,8 +872,7 @@ private:
         target->health += healingSpeed;
         healthDelt += healingSpeed;
 
-        if (healthDelt > healthPerAppointment) {
-            lastPatient = target;
+        if (healthDelt >= healthPerAppointment || target->health >= target->topHealth + healthOverload) {
             healthDelt = 0;
             return true;
         }
@@ -1042,7 +1040,7 @@ int main() {
                 saveScoreButton.draw(window);
                 window.display();
                 keyDebounceCounter++;
-                sf::sleep(sf::milliseconds(20));
+                sf::sleep(sf::milliseconds(16));
             }
             game = new Game(window);
         }
