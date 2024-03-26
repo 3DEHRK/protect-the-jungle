@@ -398,7 +398,10 @@ public:
     }
 
     bool startGame() {
+        // curlTest();
+
         srand(time(NULL));
+
         sf::Clock sleepClock;
 
         sf::Texture fieldTexture;
@@ -439,7 +442,7 @@ public:
         Button plant4Button(sf::Vector2f(700.f, 710.f), sf::Vector2f(125.f, 80.f), "1$", sf::Color(50, 180, 50), [this] {
             editMode = 1;
             selectedPlant = 4;
-            }, "res/bananaTreeShadowless.png");
+            }, "res/bananaTree.png");
 
         Button plant3Button(sf::Vector2f(850.f, 710.f), sf::Vector2f(125.f, 80.f), "6$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
@@ -995,6 +998,11 @@ int main() {
     Game* game = new Game(window);
 
     while (game->gameWindow.isOpen()) {
+
+        // add demo entitys
+        ProductionPlant* productionPlant = new ProductionPlant(GridPos(1,3));
+        game->createEntity(productionPlant);
+
         bool isWon = game->startGame();
         if (isWon) {
             // victory wirds das über haupt gä?!?!?!?! (I <3 GIBB)
