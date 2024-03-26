@@ -172,8 +172,8 @@ struct GridPos {
 // ... add functionality that all entities use here
 class Entity {
 public:
-    int x = 0;
-    int y = 0;
+    float x = 0;
+    float y = 0;
     float xVel = 0;
     float yVel = 0;
     float health = 100;
@@ -838,32 +838,18 @@ private:
 
     bool moveToTarget() {
         float tolerance = 20.f;
-        if (tolerance >= std::abs(x - target->x) && tolerance >= std::abs(y - target->y)) {
+        float xDiff = target->x - x;
+        float yDiff = target->y - y;
+
+        if (std::abs(xDiff) <= tolerance && std::abs(yDiff) <= tolerance) {
             xVel = 0.f;
             yVel = 0.f;
             return true;
         } else {
-            if (tolerance <= std::abs(x - target->x)) {
-                if (x - target->x < 0.f)
-                    xVel = movementSpeed;
-                else
-                    xVel = -1.f * movementSpeed;
-            } else {
-                xVel = 0.f;
-            }
-            if (tolerance <= std::abs(y - target->y)) {
-                if (y - target->y < 0.f)
-                    yVel = movementSpeed;
-                else
-                    yVel = -1.f * movementSpeed;
-            } else {
-                yVel = 0.f;
-            }
+            xVel = (std::abs(xDiff) <= tolerance) ? 0.f : (xDiff > 0 ? movementSpeed : -movementSpeed);
+            yVel = (std::abs(yDiff) <= tolerance) ? 0.f : (yDiff > 0 ? movementSpeed : -movementSpeed);
 
-            if(xVel < 0.f)
-                sprite.setTexture(texture1);
-            else
-                sprite.setTexture(texture);
+            sprite.setTexture((xVel >= 0.f) ? texture : texture1);
         }
         return false;
     }
