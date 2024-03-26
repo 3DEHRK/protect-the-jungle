@@ -43,32 +43,26 @@ bool saveScore(std::string name, int score) {
     if(curl) {
         // Set the URL
         curl_easy_setopt(curl, CURLOPT_URL, "http://marco.jaros.ch/score/create.php");
-        std::cout << "Set the URL" << std::endl;
         // Set the HTTP method to POST
         curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        std::cout << "Set the HTTP method to POST" << std::endl;
 
         // Set the headers to indicate JSON data
         struct curl_slist* headers = NULL;
         headers = curl_slist_append(headers, "Content-Type: application/json");
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-        std::cout << "Set the headers to indicate JSON data" << std::endl;
 
         // Set the POST data using std::format
         std::ostringstream postDataStream;
         postDataStream << R"({"name": ")" << name << R"(","score": ")" << score << "\"}";
         std::string postData = postDataStream.str();
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData.c_str());
-        std::cout << "Set the POST data to: " << postData << std::endl;
 
         // Set the write callback function
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
-        std::cout << "Set the write callback function" << std::endl;
 
         // Perform the request
         res = curl_easy_perform(curl);
-        std::cout << "Perform the request" << std::endl;
 
         // Check for errors
         if(res != CURLE_OK) {
@@ -421,7 +415,7 @@ public:
                 editMode = 2;
             });
 
-        Button plantButton(sf::Vector2f(250.f, 710.f), sf::Vector2f(125.f, 80.f), "2$", sf::Color(50, 180, 50), [this]{
+        Button plantButton(sf::Vector2f(250.f, 710.f), sf::Vector2f(125.f, 80.f), "3$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 0;
             }, "res/mongii.png");
@@ -441,7 +435,7 @@ public:
             selectedPlant = 4;
             }, "res/bananaTreeShadowless.png");
 
-        Button plant3Button(sf::Vector2f(850.f, 710.f), sf::Vector2f(125.f, 80.f), "6$", sf::Color(50, 180, 50), [this]{
+        Button plant3Button(sf::Vector2f(850.f, 710.f), sf::Vector2f(125.f, 80.f), "10$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 3;
             }, "res/mendingMongii.png");
@@ -629,10 +623,11 @@ public:
         // mhhh yummieyum.. let me see if theres a plant i can take a bite off 🧟
         if (game->hasGridCollision(getGridPos(), "plant")) {
             xVel = 0.f;
+            // attack 2 targets max
             std::vector<Entity*> collisions = game->getGridCollisions(getGridPos(), "plant");
-            for (Entity* hit : collisions) {
-                hit->damage(damageDonePerSec * game->deltaTime());
-            }
+            collisions[0]->damage(damageDonePerSec * game->deltaTime());
+            if (collisions.size() > 1)
+                collisions[1]->damage(damageDonePerSec * game->deltaTime());
         } else {
             xVel = xVelNormal;
         }
@@ -653,7 +648,6 @@ public:
         }
         walkingAnimationCounter++;
         if (getGridPos().x < 0) {
-            std::cout << "game over" << std::endl;
             game->isGameOver = true;
         }
         // Always call Entity's tick
@@ -727,7 +721,7 @@ public:
 
     void ready() override {
         group = "plant";
-        price = 2;
+        price = 3;
 
         texture.loadFromFile("res/mongii.png");
         sprite.setTexture(texture);
@@ -909,7 +903,7 @@ public:
 
     void ready() override {
         Plant::ready();
-        price = 6;
+        price = 10;
 
         texture1.loadFromFile("res/mendingMongii1.png");
         texture.loadFromFile("res/mendingMongii.png");
@@ -977,7 +971,6 @@ int main() {
     bool gameStartRequested = false;
     Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested]{
         gameStartRequested = true;
-        std::cout << "Start game" << std::endl;
     });
     while (window.isOpen() && !gameStartRequested) {
         sf::Event event;
@@ -1015,14 +1008,12 @@ int main() {
             bool gameRestartRequested = false;
             Button restartGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Restart", sf::Color(180, 100, 180), [&gameRestartRequested]{
                 gameRestartRequested = true;
-                std::cout << "Game Restarted" << std::endl;
             });
 
             bool saveScoreRequested = false;
             Button saveScoreButton(sf::Vector2f(1100.f, 450.f), sf::Vector2f(150.f, 100.f), "Save Score", sf::Color(180, 100, 180), [&saveScoreRequested, &isSaved]{
                 if (!isSaved) {
                     saveScoreRequested = true;
-                    std::cout << "Score Saved" << std::endl;
                 }
             });
 
