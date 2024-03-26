@@ -7,6 +7,8 @@
 #include <sstream>
 #include <time.h>
 #include <regex>
+#include <algorithm>
+#include <random>
 
 // Callback function to write received data into a string
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
@@ -90,7 +92,7 @@ bool saveScore(std::string name, int score) {
 
 class Button {
 public:
-    Button(sf::Vector2f position, sf::Vector2f size, const std::string& text, const sf::Color& color, std::function<void()> onClick)
+    Button(sf::Vector2f position, sf::Vector2f size, const std::string& text, const sf::Color& color, std::function<void()> onClick, const std::string& imagePath = "")
         : m_color(color), m_colorHover(color.r*1.3,color.g*1.3,color.b*1.3), m_onClick(onClick) {
         m_shape.setPosition(position);
         m_shape.setSize(size);
@@ -104,6 +106,16 @@ public:
         m_text.setOrigin(textRect.left + textRect.width / 2.0f,
                          textRect.top + textRect.height / 2.0f);
         m_text.setPosition(position.x + size.x / 2.0f, position.y + size.y / 2.0f);
+        if (imagePath != "") {
+            m_texture.loadFromFile(imagePath);
+            m_sprite.setTexture(m_texture);
+            m_text.setPosition(position.x + size.x / 2.f, position.y + size.y + 15.f);
+        }
+        sf::FloatRect spriteRect = m_sprite.getLocalBounds();
+        m_sprite.setOrigin(spriteRect.left + spriteRect.width / 2.0f,
+                           spriteRect.top + spriteRect.height / 2.0f);
+        m_sprite.setPosition(position.x + size.x / 2.0f, position.y + size.y / 2.0f);
+        m_sprite.setScale(size.y / spriteRect.height, size.y / spriteRect.height);
     }
 
     void handleEvent(sf::Event event, sf::RenderWindow& window) {
@@ -123,11 +135,14 @@ public:
 
     void draw(sf::RenderWindow& window) {
         window.draw(m_shape);
+        window.draw(m_sprite);
         window.draw(m_text);
     }
 
 private:
     sf::RectangleShape m_shape;
+    sf::Sprite m_sprite;
+    sf::Texture m_texture;
     sf::Text m_text;
     sf::Font m_font;
     sf::Color m_color;
@@ -409,25 +424,25 @@ public:
                 editMode = 2;
             });
 
-        Button plantButton(sf::Vector2f(250.f, 720.f), sf::Vector2f(125.f, 80.f), "Mongii", sf::Color(50, 180, 50), [this]{
+        Button plantButton(sf::Vector2f(250.f, 710.f), sf::Vector2f(125.f, 80.f), "2$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 0;
-            });
+            }, "res/mongii.png");
 
-        Button plant1Button(sf::Vector2f(400.f, 720.f), sf::Vector2f(125.f, 80.f), "Production\nMongii", sf::Color(50, 180, 50), [this]{
-                editMode = 1;
-                selectedPlant = 1;
-            });
-
-        Button plant2Button(sf::Vector2f(550.f, 720.f), sf::Vector2f(125.f, 80.f), "Tank\nMongii", sf::Color(50, 180, 50), [this]{
+        Button plant2Button(sf::Vector2f(400.f, 710.f), sf::Vector2f(125.f, 80.f), "4$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 2;
-            });
+            }, "res/tankmongii1.png");
 
-        Button plant3Button(sf::Vector2f(700.f, 720.f), sf::Vector2f(125.f, 80.f), "Medical\nMongii", sf::Color(50, 180, 50), [this]{
+        Button plant1Button(sf::Vector2f(550.f, 710.f), sf::Vector2f(125.f, 80.f), "5$", sf::Color(50, 180, 50), [this]{
+                editMode = 1;
+                selectedPlant = 1;
+            }, "res/production-mongii.png");
+
+        Button plant3Button(sf::Vector2f(700.f, 710.f), sf::Vector2f(125.f, 80.f), "6$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 3;
-            });
+            }, "res/mendingMongii.png");
 
         sf::Text bananasCountText = generateText(10, 10);
         sf::Text scoreText = generateText(500, 10);
@@ -808,29 +823,27 @@ private:
     sf::Texture texture1;
 
     Entity* findTarget() {
-        for (Entity* test : game->entityCollection) {   //todo:shuffle
+        std::vector<Entity*> entitiesShuffled = game->entityCollection;
+        std::shuffle(entitiesShuffled.begin(), entitiesShuffled.end(), std::default_random_engine{});
+        for (Entity* test : game->entityCollection) {
             if (test->group == "plant" &&
                 test != lastPatient &&
                 test->health < test->topHealth &&
                 test != this) {
-                //std::cout<<"target found"<<std::endl;
                 idleTimer = 2.f + rand() / RAND_MAX;
                 return test;
             }
         }
-        //std::cout<<"no target found"<<std::endl;
         return nullptr;
     }
 
     bool moveToTarget() {
         float tolerance = 20.f;
         if (tolerance >= std::abs(x - target->x) && tolerance >= std::abs(y - target->y)) {
-            //std::cout<<"there :)"<<std::endl;
             xVel = 0.f;
             yVel = 0.f;
             return true;
         } else {
-            //std::cout<<"moving"<<std::endl;
             if (tolerance <= std::abs(x - target->x)) {
                 if (x - target->x < 0.f)
                     xVel = movementSpeed;
