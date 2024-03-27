@@ -667,7 +667,7 @@ public:
         topHealth = 500;
         health = topHealth;
         xVelNormal = -50.f;
-        texture.loadFromFile("res/zombie.png");
+        texture.loadFromFile("res/tank_woodchoppaaa.png");
     }
     void tick() override {
         Zombie::tick();
