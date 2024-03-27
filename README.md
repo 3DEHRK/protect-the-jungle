@@ -28,13 +28,33 @@
 
 ## Ideas
 
-### Zombies
-1. Lane switching
-2. Piggyback
-3. slow but high hp tank göy so you have to take action
-4. ... 🦋
+### Forsters
+1. Forster
+2. Net cacher
+3. Tanker
+4. Gator transporter
+5. Piggy back
+6. Chainsaw carrier
+7. upside down ufospawning upside down zombies
 
-### Plants
-1. Minion spawning
-2. Split damage & knockback, short & longrange ...
-3. ... 🧙‍♂️
+
+
+* Lane switching
+* Piggyback
+* slow but high hp tank göy so you have to take action
+* ... 🦋
+
+### Monkeys
+1. Stone flinger
+2. Boulder launcher
+3. Poison dart monkey
+4. Wall monkey
+5. medic monkey
+6. Banana farmer | Banana 
+7. Monkey mama (child soldiers)
+
+
+
+* Minion spawning
+* Split damage & knockback, short & longrange ...
+* ... 🧙‍♂️
