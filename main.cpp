@@ -376,7 +376,7 @@ public:
         }
     }
 
-    void createZombieDefault();
+    void spawnZombie(int type);
 
     sf::Text generateText(int x, int y) {
 //        sf::Font m_font;
@@ -481,11 +481,11 @@ public:
             if ((rand() % zombieChance + 1) == zombieChance) {
                 int whichZombieNumber = rand() % 100;
                 // pushing a default skin 75%
-                if(whichZombieNumber < 74) {
-                    createZombieDefault();
-                }
+                if (whichZombieNumber < 74)
+                   spawnZombie(0);
+                else if (whichZombieNumber > 73 || whichZombieNumber < 80)
+                    spawnZombie(1);
                 // 25 % für die andere looser
-
             }
             waveCount++;
             // noch einerhalb minute hört wave uf
@@ -659,6 +659,20 @@ public:
     float getProgressLocation() const { return game->WINDOW_WIDTH - x; }
 };
 
+class TankZombie : public Zombie {
+public:
+    TankZombie(int startingRow) : Zombie(startingRow) {}
+    void ready() override {
+        Zombie::ready();
+        topHealth = 500;
+        health = topHealth;
+        xVelNormal = -50.f;
+        texture.loadFromFile("res/zombie.png");
+    }
+    void tick() override {
+        Zombie::tick();
+    }
+};
 
 class Projectile : public Entity {
 protected:
@@ -958,8 +972,20 @@ int Game::placePlant() {
   return 0;
 }
 
-void Game::createZombieDefault() {
-    Zombie* zombie = new Zombie(rand() % 8);
+void Game::spawnZombie(int type) {
+    Zombie* zombie;
+
+    switch (type) {
+    case 0:
+        zombie = new Zombie(rand() % 8);
+        break;
+    case 1:
+        zombie = new TankZombie(rand() % 8);
+        break;
+    default:
+        break;
+    }
+
     createEntity(zombie);  
 }
 
