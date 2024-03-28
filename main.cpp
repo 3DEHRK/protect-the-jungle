@@ -172,22 +172,42 @@ public:
     float yVel = 0;
     float health = 100;
     float topHealth = 100;
-
-    sf::Texture texture;
-    sf::Sprite sprite;
-
     int id = -1;
     std::string group = "entity";
     std::string type = "entity";
+
+    // animation
+    std::string resDir = "entity";
+    sf::Texture* textures = nullptr;
+    sf::Sprite sprite;
+    int numFrames = 1;
+    int currentFrame = 0;
+    float frameDuration = 0.2f;
+    float frameTimer = 0.f;
     
     class Game* game = nullptr;
 
     Entity() {}
+    virtual ~Entity() {
+        delete[] textures;
+    }
 
     // use ready() instead of the constructor since class Game* game; isn't defined there yet
     virtual void ready() {
-        texture.loadFromFile("res/entity.png");
-        sprite.setTexture(texture);
+        textures = new sf::Texture[numFrames];
+        for (int i = 0; i < numFrames - 1; ++i) {
+            textures[i].loadFromFile("res/" + resDir + "/" + std::to_string(i) + ".png");
+        }
+        sprite.setTexture(textures[0]);
+    }
+
+    void updateAnimation(float dt) {
+        frameTimer += dt;
+        if (frameTimer >= frameDuration) {
+            frameTimer = 0.0f;
+            currentFrame = (currentFrame + 1) % numFrames;
+            sprite.setTexture(textures[currentFrame]);
+        }
     }
 
     // defined below Game class because they use Game class functions
@@ -418,17 +438,17 @@ public:
         Button plantButton(sf::Vector2f(250.f, 710.f), sf::Vector2f(125.f, 80.f), "3$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 0;
-            }, "res/mongii.png");
+            }, "res/monkey/0.png");
 
         Button plant2Button(sf::Vector2f(400.f, 710.f), sf::Vector2f(125.f, 80.f), "4$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 2;
-            }, "res/tankmongii1.png");
+            }, "res/tank_monkey/0.png");
 
         Button plant1Button(sf::Vector2f(550.f, 710.f), sf::Vector2f(125.f, 80.f), "5$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 1;
-            }, "res/production-mongii.png");
+            }, "res/prod_monkey/0.png");
 
         Button plant4Button(sf::Vector2f(700.f, 710.f), sf::Vector2f(125.f, 80.f), "1$", sf::Color(50, 180, 50), [this] {
             editMode = 1;
@@ -438,7 +458,7 @@ public:
         Button plant3Button(sf::Vector2f(850.f, 710.f), sf::Vector2f(125.f, 80.f), "10$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 3;
-            }, "res/mendingMongii.png");
+            }, "res/med_monkey/0.png");
 
         sf::Text bananasCountText = generateText(10, 10);
         sf::Text scoreText = generateText(500, 10);
@@ -550,12 +570,13 @@ void Entity::tick() {
     x += xVel * game->deltaTime();
     y += yVel * game->deltaTime();
     sprite.setPosition(x, y);
+    updateAnimation(game->deltaTime());
     game->gameWindow.draw(sprite);
 
     sf::Text healthText;
     healthText.setFont(game->font);
     healthText.setString(std::to_string((int)health));
-    healthText.setCharacterSize(14);
+    healthText.setCharacterSize(12);
     healthText.setPosition(x, y + 20.f);
     game->gameWindow.draw(healthText);
 }
@@ -600,10 +621,12 @@ public:
     Zombie(int startingGridRow) : startingGridRow(startingGridRow) {}
 
     void ready() override {
-        group = "zombie";
+        resDir = "woodchopper";
+        numFrames = 1;
+        // Call Entity's ready after setting the ressources directory
+        Entity::ready();
 
-        texture.loadFromFile("res/woodchoppaaa.png");
-        sprite.setTexture(texture);
+        group = "zombie";
         sprite.setScale(100/32, 100/32);
         sprite.setOrigin(sprite.getLocalBounds().width / 2.f, sprite.getLocalBounds().height / 2.f);
 
@@ -663,11 +686,12 @@ class TankZombie : public Zombie {
 public:
     TankZombie(int startingRow) : Zombie(startingRow) {}
     void ready() override {
+        resDir = "tank_woodchoper";
+        numFrames = 1;
         Zombie::ready();
         topHealth = 500;
         health = topHealth;
         xVelNormal = -50.f;
-        texture.loadFromFile("res/tank_woodchoppaaa.png");
     }
     void tick() override {
         Zombie::tick();
@@ -687,10 +711,11 @@ public:
     Projectile(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
-        group = "projectile";
-        texture.loadFromFile("res/stonee.png");
-        sprite.setTexture(texture);
+        resDir = "rock";
+        numFrames = 1;
         sprite.setScale(100/32, 100/32);
+        Entity::ready();
+        group = "projectile";
 
         x = game->gridToFree(initGridPos.x);
         y = game->gridToFree(initGridPos.y) - 20.f;
@@ -734,13 +759,12 @@ public:
     Plant(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
+        resDir = "monkey";
+        numFrames = 1;
+        sprite.setScale(100/32, 100/32);
+        Entity::ready();
         group = "plant";
         price = 3;
-
-        texture.loadFromFile("res/mongii.png");
-        sprite.setTexture(texture);
-        sprite.setScale(100/32, 100/32);
-
         setGridPos(initGridPos);
     }
 
@@ -773,12 +797,11 @@ public:
     ProductionPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
+        resDir = "prod_monkey";
+        numFrames = 1;
+        sprite.setScale(100/32, 100/32);
         Plant::ready();
         price = 5;
-
-        texture.loadFromFile("res/production-mongii.png");
-        sprite.setTexture(texture);
-        sprite.setScale(100/32, 100/32);
     }
 
     void tick() override {
@@ -818,12 +841,12 @@ class TreePlant : public Plant{
 public:
     TreePlant(GridPos gridPos) : Plant(gridPos) {}
     void ready() override {
+        resDir = "tree";
+        numFrames = 1;
+        sprite.setScale(100 / 32, 100 / 32);
         Plant::ready();
         type = "tree";
         price = 1;
-        texture.loadFromFile("res/bananaTree.png");
-        sprite.setTexture(texture);
-        sprite.setScale(100 / 32, 100 / 32);
     }
     void tick() override {
         Entity::tick();
@@ -836,22 +859,22 @@ public:
     TankPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
+        resDir = "tank_monkey";
+        numFrames = 3;
+        frameDuration = 1000000;
+        sprite.setScale(100/32, 100/32);
         Plant::ready();
         price = 4;
         topHealth = 1000;
         health = topHealth;
-
-        texture.loadFromFile("res/tankmongii1.png");
-        sprite.setTexture(texture);
-        sprite.setScale(100/32, 100/32);
     }
 
     void tick() override {
-        texture.loadFromFile("res/tankmongii1.png");
+        sprite.setTexture(textures[0]);
         if (health <= 666)
-            texture.loadFromFile("res/tankmongii2.png");
+            sprite.setTexture(textures[1]);
         if (health <= 333)
-            texture.loadFromFile("res/tankmongii3.png");
+            sprite.setTexture(textures[2]);
         Entity::tick();
     }
 };
@@ -866,8 +889,6 @@ private:
     float healthDelt = 0;
     float movementSpeed = 100.f;
     float idleTimer = 2.f;
-
-    sf::Texture texture1;
 
     Entity* findTarget() {
         std::vector<Entity*> entitiesShuffled = game->entityCollection;
@@ -897,7 +918,7 @@ private:
             xVel = (std::abs(xDiff) <= tolerance) ? 0.f : (xDiff > 0 ? movementSpeed : -movementSpeed);
             yVel = (std::abs(yDiff) <= tolerance) ? 0.f : (yDiff > 0 ? movementSpeed : -movementSpeed);
 
-            sprite.setTexture((xVel >= 0.f) ? texture : texture1);
+            //sprite.setTexture((xVel >= 0.f) ? texture : texture1); todo: flip sprite on walk dir
         }
         return false;
     }
@@ -916,12 +937,10 @@ public:
     MendingPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
+        resDir = "med_monkey";
+        numFrames = 2;
         Plant::ready();
         price = 10;
-
-        texture1.loadFromFile("res/mendingMongii1.png");
-        texture.loadFromFile("res/mendingMongii.png");
-        sprite.setTexture(texture);
     }
 
     void tick() override {
