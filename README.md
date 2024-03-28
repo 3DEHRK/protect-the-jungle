@@ -22,7 +22,7 @@
 
 <br/>
 
-![Alt Text](/uml/classes.svg)
+![classes](/uml/classes.svg)
 
 <br/>
 
@@ -58,3 +58,7 @@
 * Minion spawning
 * Split damage & knockback, short & longrange ...
 * ... 🧙‍♂️
+
+<br/>
+
+![1000 lines](/res/1000.jpg)

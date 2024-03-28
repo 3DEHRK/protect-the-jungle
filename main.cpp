@@ -9,6 +9,7 @@
 #include <regex>
 #include <algorithm>
 #include <random>
+#include <filesystem>
 
 // Callback function to write received data into a string
 size_t WriteCallback(void* contents, size_t size, size_t nmemb, std::string* buffer) {
@@ -172,13 +173,18 @@ public:
     float yVel = 0;
     float health = 100;
     float topHealth = 100;
-
-    sf::Texture texture;
-    sf::Sprite sprite;
-
     int id = -1;
     std::string group = "entity";
     std::string type = "entity";
+
+    // animation
+    std::string resDir = "entity";
+    bool pauseAnimation = false;
+    std::vector<sf::Texture> textures;
+    sf::Sprite sprite;
+    int currentFrame = 0;
+    float frameDuration = 0.2f;
+    float frameTimer = 0.f;
     
     class Game* game = nullptr;
 
@@ -186,8 +192,32 @@ public:
 
     // use ready() instead of the constructor since class Game* game; isn't defined there yet
     virtual void ready() {
-        texture.loadFromFile("res/entity.png");
-        sprite.setTexture(texture);
+        int i = 0;
+        bool loaded = true;
+        while (loaded) {
+            std::string filename = "res/" + resDir + "/" + std::to_string(i) + ".png";
+            sf::Texture texture;
+            if (std::filesystem::exists(filename)) {
+                texture.loadFromFile(filename);
+                textures.push_back(texture);
+                i++;
+            }
+            else {
+                loaded = false;
+            }
+        }
+        sprite.setTexture(textures[0]);
+    }
+
+    void updateAnimation(float dt) {
+        if (pauseAnimation)
+            return;
+        frameTimer += dt;
+        if (frameTimer >= frameDuration) {
+            frameTimer = 0.0f;
+            currentFrame = (currentFrame + 1) % textures.size();
+            sprite.setTexture(textures[currentFrame]);
+        }
     }
 
     // defined below Game class because they use Game class functions
@@ -415,33 +445,33 @@ public:
                 editMode = 2;
             });
 
-        Button plantButton(sf::Vector2f(250.f, 710.f), sf::Vector2f(125.f, 80.f), "3$", sf::Color(50, 180, 50), [this]{
+        Button plantButton(sf::Vector2f(250.f, 720.f), sf::Vector2f(125.f, 80.f), "3$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 0;
-            }, "res/mongii.png");
+            }, "res/monkey/0.png");
 
-        Button plant2Button(sf::Vector2f(400.f, 710.f), sf::Vector2f(125.f, 80.f), "4$", sf::Color(50, 180, 50), [this]{
+        Button plant2Button(sf::Vector2f(400.f, 720.f), sf::Vector2f(125.f, 80.f), "4$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 2;
-            }, "res/tankmongii1.png");
+            }, "res/tank_monkey/0.png");
 
-        Button plant1Button(sf::Vector2f(550.f, 710.f), sf::Vector2f(125.f, 80.f), "5$", sf::Color(50, 180, 50), [this]{
+        Button plant1Button(sf::Vector2f(550.f, 720.f), sf::Vector2f(125.f, 80.f), "5$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 1;
-            }, "res/production-mongii.png");
+            }, "res/prod_monkey/0.png");
 
-        Button plant4Button(sf::Vector2f(700.f, 710.f), sf::Vector2f(125.f, 80.f), "1$", sf::Color(50, 180, 50), [this] {
+        Button plant4Button(sf::Vector2f(700.f, 720.f), sf::Vector2f(125.f, 80.f), "1$", sf::Color(50, 180, 50), [this] {
             editMode = 1;
             selectedPlant = 4;
             }, "res/bananaTreeShadowless.png");
 
-        Button plant3Button(sf::Vector2f(850.f, 710.f), sf::Vector2f(125.f, 80.f), "10$", sf::Color(50, 180, 50), [this]{
+        Button plant3Button(sf::Vector2f(850.f, 720.f), sf::Vector2f(125.f, 80.f), "10$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 3;
-            }, "res/mendingMongii.png");
+            }, "res/med_monkey/0.png");
 
-        sf::Text bananasCountText = generateText(10, 10);
-        sf::Text scoreText = generateText(500, 10);
+        sf::Text bananasCountText = generateText(250, 680);
+        sf::Text scoreText = generateText(550, 680);
 
         // Update game logic at FRAME_RATE
         while (gameWindow.isOpen()) {
@@ -520,8 +550,8 @@ public:
                 }
             }
 
-            bananasCountText.setString("Bananas to your name: " + std::to_string(bananaCount));
-            scoreText.setString("Your score: " + std::to_string(score));
+            bananasCountText.setString("Bananas: " + std::to_string(bananaCount) + "$");
+            scoreText.setString("Score: " + std::to_string(score));
 
             // draw static elements
             gameWindow.draw(bananasCountText);
@@ -550,12 +580,13 @@ void Entity::tick() {
     x += xVel * game->deltaTime();
     y += yVel * game->deltaTime();
     sprite.setPosition(x, y);
+    updateAnimation(game->deltaTime());
     game->gameWindow.draw(sprite);
 
     sf::Text healthText;
     healthText.setFont(game->font);
     healthText.setString(std::to_string((int)health));
-    healthText.setCharacterSize(14);
+    healthText.setCharacterSize(13);
     healthText.setPosition(x, y + 20.f);
     game->gameWindow.draw(healthText);
 }
@@ -600,10 +631,11 @@ public:
     Zombie(int startingGridRow) : startingGridRow(startingGridRow) {}
 
     void ready() override {
-        group = "zombie";
+        resDir = "woodchopper";
+        // Call Entity's ready after setting the ressources directory
+        Entity::ready();
 
-        texture.loadFromFile("res/woodchoppaaa.png");
-        sprite.setTexture(texture);
+        group = "zombie";
         sprite.setScale(100/32, 100/32);
         sprite.setOrigin(sprite.getLocalBounds().width / 2.f, sprite.getLocalBounds().height / 2.f);
 
@@ -663,14 +695,23 @@ class TankZombie : public Zombie {
 public:
     TankZombie(int startingRow) : Zombie(startingRow) {}
     void ready() override {
-        Zombie::ready();
+        resDir = "tank_woodchopper";
+        Entity::ready();
+
         topHealth = 500;
         health = topHealth;
         xVelNormal = -50.f;
-        texture.loadFromFile("res/tank_woodchoppaaa.png");
+        xVel = xVelNormal;
+        group = "zombie";
+        sprite.setScale(100 / 32, 100 / 32);
+        sprite.setOrigin(sprite.getLocalBounds().width / 2.f, sprite.getLocalBounds().height / 2.f);
+        y = game->gridToFree(startingGridRow);
+        x = game->WINDOW_WIDTH;
     }
-    void tick() override {
-        Zombie::tick();
+
+    bool damage(float d) override {
+        knockback += d / 3;
+        return Entity::damage(d);
     }
 };
 
@@ -687,10 +728,10 @@ public:
     Projectile(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
-        group = "projectile";
-        texture.loadFromFile("res/stonee.png");
-        sprite.setTexture(texture);
+        resDir = "rock";
         sprite.setScale(100/32, 100/32);
+        Entity::ready();
+        group = "projectile";
 
         x = game->gridToFree(initGridPos.x);
         y = game->gridToFree(initGridPos.y) - 20.f;
@@ -734,13 +775,11 @@ public:
     Plant(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
-        group = "plant";
-        price = 3;
-
-        texture.loadFromFile("res/mongii.png");
-        sprite.setTexture(texture);
+        resDir = "monkey";
         sprite.setScale(100/32, 100/32);
-
+        Entity::ready();
+        price = 3;
+        group = "plant";
         setGridPos(initGridPos);
     }
 
@@ -773,25 +812,31 @@ public:
     ProductionPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
-        Plant::ready();
-        price = 5;
-
-        texture.loadFromFile("res/production-mongii.png");
-        sprite.setTexture(texture);
+        resDir = "prod_monkey";
         sprite.setScale(100/32, 100/32);
+        Entity::ready();
+        frameDuration = 2.f;
+        group = "plant";
+        price = 5;
+        setGridPos(initGridPos);
     }
 
     void tick() override {
-        productionTimer += game->deltaTime();
-        if (productionTimer >= productionDelay)
-            tryProduce();
-
+        if (isTreeAround()) {
+            productionTimer += game->deltaTime();
+            pauseAnimation = false;
+            if (productionTimer >= productionDelay) {
+                game->bananaCount += productionAmount;
+                productionTimer = 0.f;
+            }
+        } else {
+            pauseAnimation = true;
+        }
         Entity::tick();
     }
 
-    void tryProduce() {
+    bool isTreeAround() {
         std::vector<Entity*> around;
-
         std::vector<Entity*> above = game->getGridCollisions(GridPos(getGridPos().x, getGridPos().y + 1), "plant");
         around.insert(around.end(), above.begin(), above.end());
         std::vector<Entity*> below = game->getGridCollisions(GridPos(getGridPos().x, getGridPos().y - 1), "plant");
@@ -806,11 +851,7 @@ public:
             if (test->type == "tree")
                 isTreeAround = true;
         }
-
-        if (isTreeAround) {
-            game->bananaCount += productionAmount;
-            productionTimer = 0.f;
-        }
+        return isTreeAround;
     }
 };
 
@@ -818,12 +859,13 @@ class TreePlant : public Plant{
 public:
     TreePlant(GridPos gridPos) : Plant(gridPos) {}
     void ready() override {
-        Plant::ready();
+        resDir = "tree";
+        sprite.setScale(100 / 32, 100 / 32);
+        Entity::ready();
         type = "tree";
         price = 1;
-        texture.loadFromFile("res/bananaTree.png");
-        sprite.setTexture(texture);
-        sprite.setScale(100 / 32, 100 / 32);
+        group = "plant";
+        setGridPos(initGridPos);
     }
     void tick() override {
         Entity::tick();
@@ -836,22 +878,23 @@ public:
     TankPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
-        Plant::ready();
+        resDir = "tank_monkey";
+        pauseAnimation = true;
+        sprite.setScale(100/32, 100/32);
+        Entity::ready();
         price = 4;
         topHealth = 1000;
         health = topHealth;
-
-        texture.loadFromFile("res/tankmongii1.png");
-        sprite.setTexture(texture);
-        sprite.setScale(100/32, 100/32);
+        group = "plant";
+        setGridPos(initGridPos);
     }
 
     void tick() override {
-        texture.loadFromFile("res/tankmongii1.png");
+        sprite.setTexture(textures[0]);
         if (health <= 666)
-            texture.loadFromFile("res/tankmongii2.png");
+            sprite.setTexture(textures[1]);
         if (health <= 333)
-            texture.loadFromFile("res/tankmongii3.png");
+            sprite.setTexture(textures[2]);
         Entity::tick();
     }
 };
@@ -866,8 +909,6 @@ private:
     float healthDelt = 0;
     float movementSpeed = 100.f;
     float idleTimer = 2.f;
-
-    sf::Texture texture1;
 
     Entity* findTarget() {
         std::vector<Entity*> entitiesShuffled = game->entityCollection;
@@ -897,7 +938,7 @@ private:
             xVel = (std::abs(xDiff) <= tolerance) ? 0.f : (xDiff > 0 ? movementSpeed : -movementSpeed);
             yVel = (std::abs(yDiff) <= tolerance) ? 0.f : (yDiff > 0 ? movementSpeed : -movementSpeed);
 
-            sprite.setTexture((xVel >= 0.f) ? texture : texture1);
+            sprite.setTexture((xVel >= 0.f) ? textures[0] : textures[1]);
         }
         return false;
     }
@@ -916,12 +957,13 @@ public:
     MendingPlant(GridPos gridPos) : Plant(gridPos) {}
 
     void ready() override {
-        Plant::ready();
+        resDir = "med_monkey";
+        sprite.setScale(100 / 32, 100 / 32);
+        Entity::ready();
+        pauseAnimation = true;
         price = 10;
-
-        texture1.loadFromFile("res/mendingMongii1.png");
-        texture.loadFromFile("res/mendingMongii.png");
-        sprite.setTexture(texture);
+        group = "plant";
+        setGridPos(initGridPos);
     }
 
     void tick() override {
@@ -1043,7 +1085,7 @@ int main() {
                 }
             });
 
-            sf::Text scoreText = game->generateText(650, 350);
+            sf::Text scoreText = game->generateText(250, 350);
             scoreText.setString("Your score: " + std::to_string(game->score));
             sf::Text playerText = game->generateText(650, 200);
 
