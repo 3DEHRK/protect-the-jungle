@@ -240,6 +240,7 @@ Manage entities at runtime:
 Collision checks:
     std::vector<Entity*> getCollisions(int x, int y, int hitRadius, const std::string& groupFilter = "")
     std::vector<Entity*> getGridCollisions(const GridPos collision, const std::string& groupFilter = "")
+    std::vector<Entity*> getGridCollisionsAround(const GridPos center, const std::string& groupFilter = "")
     bool hasGridCollision(const GridPos gridPos, const std::string& groupFilter = "")
 
 Switching position units:
@@ -365,6 +366,23 @@ public:
             }
         }
         return false;
+    }
+
+    std::vector<Entity*> getGridCollisionsAround(const GridPos center, const std::string& groupFilter = "") {
+        std::vector<Entity*> around;
+
+        std::vector<Entity*> inside = getGridCollisions(center, groupFilter);
+        around.insert(around.end(), inside.begin(), inside.end());
+        std::vector<Entity*> above = getGridCollisions(GridPos(center.x, center.y + 1), groupFilter);
+        around.insert(around.end(), above.begin(), above.end());
+        std::vector<Entity*> below = getGridCollisions(GridPos(center.x, center.y - 1), groupFilter);
+        around.insert(around.end(), below.begin(), below.end());
+        std::vector<Entity*> right = getGridCollisions(GridPos(center.x + 1, center.y), groupFilter);
+        around.insert(around.end(), right.begin(), right.end());
+        std::vector<Entity*> left = getGridCollisions(GridPos(center.x - 1, center.y), groupFilter);
+        around.insert(around.end(), left.begin(), left.end());
+
+        return around;
     }
 
     bool hasZombieOnRowBefore(GridPos gridPos) {
@@ -868,18 +886,8 @@ public:
     }
 
     bool isTreeAround() {
-        std::vector<Entity*> around;
-        std::vector<Entity*> above = game->getGridCollisions(GridPos(getGridPos().x, getGridPos().y + 1), "plant");
-        around.insert(around.end(), above.begin(), above.end());
-        std::vector<Entity*> below = game->getGridCollisions(GridPos(getGridPos().x, getGridPos().y - 1), "plant");
-        around.insert(around.end(), below.begin(), below.end());
-        std::vector<Entity*> right = game->getGridCollisions(GridPos(getGridPos().x + 1, getGridPos().y), "plant");
-        around.insert(around.end(), right.begin(), right.end());
-        std::vector<Entity*> left = game->getGridCollisions(GridPos(getGridPos().x - 1, getGridPos().y), "plant");
-        around.insert(around.end(), left.begin(), left.end());
-
         bool isTreeAround = false;
-        for (const Entity* test : around) {
+        for (const Entity* test : game->getGridCollisionsAround(getGridPos(),"plant")) {
             if (test->type == "tree")
                 isTreeAround = true;
         }
