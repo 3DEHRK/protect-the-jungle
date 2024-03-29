@@ -511,10 +511,12 @@ public:
             if ((rand() % zombieChance + 1) == zombieChance) {
                 int whichZombieNumber = rand() % 100;
                 // pushing a default skin 75%
-                if (whichZombieNumber < 74)
+                if (whichZombieNumber <= 74)
                    spawnZombie(0);
-                else if (whichZombieNumber > 73 || whichZombieNumber < 80)
+                else if (whichZombieNumber <= 86)
                     spawnZombie(1);
+				else if (whichZombieNumber <= 99)
+					spawnZombie(2);
                 // 25 % für die andere looser
             }
             waveCount++;
@@ -713,6 +715,36 @@ public:
         knockback += d / 3;
         return Entity::damage(d);
     }
+};
+
+class ChainsawZombie : public Zombie {
+public:
+    ChainsawZombie(int startingRow) : Zombie(startingRow) {}
+    void ready() override {
+        resDir = "chainsaw_carrier";
+        Entity::ready();
+
+        topHealth = 100;
+        health = topHealth;
+        xVelNormal = -100.f;
+        xVel = xVelNormal;
+		damageDonePerSec = 175.f;
+        group = "zombie";
+        sprite.setScale(100 / 32, 100 / 32);
+        sprite.setOrigin(sprite.getLocalBounds().width / 2.f, sprite.getLocalBounds().height / 2.f);
+        y = game->gridToFree(startingGridRow);
+        x = game->WINDOW_WIDTH;
+    }
+	void tick() override {
+		if(walkingAnimationCounter % 20 == 0) {
+			sprite.setTexture(textures[0]);
+		}
+		if(walkingAnimationCounter % 20 == 10) {
+			sprite.setTexture(textures[1]);
+		}
+		Zombie::tick();
+	}
+
 };
 
 class Projectile : public Entity {
@@ -1023,6 +1055,9 @@ void Game::spawnZombie(int type) {
         break;
     case 1:
         zombie = new TankZombie(rand() % 8);
+        break;
+    case 2:
+        zombie = new ChainsawZombie(rand() % 8);
         break;
     default:
         break;
