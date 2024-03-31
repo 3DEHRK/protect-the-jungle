@@ -488,6 +488,11 @@ public:
                 selectedPlant = 3;
             }, "res/med_monkey/0.png");
 
+        Button plant5Button(sf::Vector2f(1000.f, 720.f), sf::Vector2f(125.f, 80.f), "5$", sf::Color(50, 180, 50), [this]{
+                editMode = 1;
+                selectedPlant = 5;
+            }, "res/bomb/0.png");
+
         sf::Text bananasCountText = generateText(250, 680);
         sf::Text scoreText = generateText(550, 680);
 
@@ -506,6 +511,7 @@ public:
                 plant2Button.handleEvent(event, gameWindow);
                 plant3Button.handleEvent(event, gameWindow);
                 plant4Button.handleEvent(event, gameWindow);
+                plant5Button.handleEvent(event, gameWindow);
             }
             mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
             mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
@@ -586,6 +592,7 @@ public:
             plant2Button.draw(gameWindow);
             plant3Button.draw(gameWindow);
             plant4Button.draw(gameWindow);
+            plant5Button.draw(gameWindow);
 
             gameWindow.display();
 
@@ -1051,6 +1058,28 @@ public:
     }
 };
 
+class BombPlant : public Plant{
+public:
+    BombPlant(GridPos gridPos) : Plant(gridPos) {}
+    void ready() override {
+        resDir = "bomb";
+        sprite.setScale(100 / 96, 100 / 96);
+        Entity::ready();
+        price = 5;
+        group = "plant";
+        setGridPos(initGridPos);
+    }
+    void tick() override {
+        Entity::tick();
+    }
+    bool damage(float d) override {
+        for (Entity* victim : game->getGridCollisionsAround(getGridPos(), "zombie"))
+            victim->damage(500.f);
+        game->destroyEntity(id);
+        return true;
+    }
+};
+
 
 int Game::placePlant() {
   GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
@@ -1071,6 +1100,9 @@ int Game::placePlant() {
             break;
         case 4:
             plant = new TreePlant(gridPos);
+            break;
+        case 5:
+            plant = new BombPlant(gridPos);
             break;
         default:
             plant = new Plant(gridPos);
