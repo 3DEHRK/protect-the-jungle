@@ -531,6 +531,9 @@ public:
                 entity->tick();
             }
 
+            //dev
+            waveCount = 3600;
+
             // spöwns a sömbie every tick with 1 zu füfhundert chance.
             if ((rand() % zombieChance + 1) == zombieChance) {
                 int whichZombieNumber = rand() % 100;
@@ -742,7 +745,7 @@ public:
     }
 
     bool damage(float d) override {
-        knockback += d / 3;
+        knockback += d / 4;
         return Entity::damage(d);
     }
 };
@@ -774,7 +777,10 @@ public:
 		}
 		Zombie::tick();
 	}
-
+    bool damage(float d) override {
+        knockback += d / 4;
+        return Entity::damage(d);
+    }
 };
 
 class BulldozerZombie : public Zombie {
@@ -788,7 +794,7 @@ public:
         health = topHealth;
         xVelNormal = -50.f;
         xVel = xVelNormal;
-		damageDonePerSec = 400.f;
+		damageDonePerSec = 300.f;
         group = "zombie";
         sprite.setScale(100 / 32, 100 / 32);
         y = game->gridToFree(startingGridRow);
@@ -803,7 +809,7 @@ public:
 class Projectile : public Entity {
 protected:
     float lifeSpan = 1.0f;
-    int damageDone = 15;
+    int damageDone = 12;
     float baseVelocity = 1000.f;
 
     GridPos initGridPos;
@@ -850,7 +856,7 @@ public:
 
 class Plant : public Entity {
 protected:
-    float attackSpeed = 2.5f;
+    float attackSpeed = 2.0f;
     float attackTimer = 0.f;
 
     GridPos initGridPos;
@@ -1060,10 +1066,12 @@ public:
 
 class BombPlant : public Plant{
 public:
+    bool detonated = false;
     BombPlant(GridPos gridPos) : Plant(gridPos) {}
     void ready() override {
         resDir = "bomb";
         pauseAnimation = true;
+        frameDuration = 0.1f;
         sprite.setOrigin(32.f, 32.f);
         sprite.setScale(100 / 32, 100 / 32);
         Entity::ready();
@@ -1080,9 +1088,12 @@ public:
     }
     void updateAnimation(float dt) override {
         Entity::updateAnimation(dt);
-        if (currentFrame == textures.size() - 1) {
+        if (currentFrame == 2) {
             for (Entity* victim : game->getGridCollisionsAround(getGridPos(), "zombie"))
-                victim->damage(500.f);
+                victim->damage(200.f);
+            detonated = true;
+        }
+        if (currentFrame == 0 && detonated) {
             game->destroyEntity(id);
         }
     }
