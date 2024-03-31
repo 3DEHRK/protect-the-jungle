@@ -1,6 +1,6 @@
 # Protect The Jungle: monkeys fight back!
 
-#### Required to build: gcc compiler -> https://filestash.gibb.ch/files/IET-Share/sh-classes/inf-306-21l/ or https://mega.nz/file/G6xCXarZ#aXHECbsb8Ddlxk9fQARzLK8MmrpxgCmmBqKFkZyQdec -> Add Path Variable C:\mingw32\bin
+#### Required to build: gcc compiler -> https://www.sfml-dev.org/download/sfml/2.6.1/ (in red box) -> Add Path Variable C:\mingw32\bin
 #### SFML Docs: https://www.sfml-dev.org/tutorials/2.6
 
 <br/>

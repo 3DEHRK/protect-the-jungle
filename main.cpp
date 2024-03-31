@@ -534,7 +534,10 @@ public:
                 else if (whichZombieNumber <= 86)
                     spawnZombie(1);
 				else if (whichZombieNumber <= 99)
-					spawnZombie(2);
+                    if (rand() % 2 == 0)
+					    spawnZombie(2);
+                    else
+                        spawnZombie(3);
                 // 25 % für die andere looser
             }
             waveCount++;
@@ -603,12 +606,14 @@ void Entity::tick() {
     updateAnimation(game->deltaTime());
     game->gameWindow.draw(sprite);
 
-    sf::Text healthText;
-    healthText.setFont(game->font);
-    healthText.setString(std::to_string((int)health));
-    healthText.setCharacterSize(13);
-    healthText.setPosition(x, y + 20.f);
-    game->gameWindow.draw(healthText);
+    if (health < topHealth) {
+        sf::Text healthText;
+        healthText.setFont(game->font);
+        healthText.setString(std::to_string((int)health));
+        healthText.setCharacterSize(13);
+        healthText.setPosition(x, y + 20.f);
+        game->gameWindow.draw(healthText);
+    }
 }
 
 bool Entity::damage(float d) {
@@ -763,6 +768,29 @@ public:
 		Zombie::tick();
 	}
 
+};
+
+class BulldozerZombie : public Zombie {
+public:
+    BulldozerZombie(int startingRow) : Zombie(startingRow) {}
+    void ready() override {
+        resDir = "bulldozer";
+        Entity::ready();
+
+        topHealth = 200;
+        health = topHealth;
+        xVelNormal = -50.f;
+        xVel = xVelNormal;
+		damageDonePerSec = 400.f;
+        group = "zombie";
+        sprite.setScale(100 / 32, 100 / 32);
+        y = game->gridToFree(startingGridRow);
+        x = game->WINDOW_WIDTH;
+    }
+	void tick() override {
+        walkingAnimationCounter = 0;
+		Zombie::tick();
+	}
 };
 
 class Projectile : public Entity {
@@ -1067,6 +1095,8 @@ void Game::spawnZombie(int type) {
     case 2:
         zombie = new ChainsawZombie(rand() % 8);
         break;
+    case 3:
+        zombie = new BulldozerZombie(rand() % 8);
     default:
         break;
     }
