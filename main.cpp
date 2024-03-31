@@ -209,7 +209,7 @@ public:
         sprite.setTexture(textures[0]);
     }
 
-    void updateAnimation(float dt) {
+    virtual void updateAnimation(float dt) {
         if (pauseAnimation)
             return;
         frameTimer += dt;
@@ -1063,7 +1063,9 @@ public:
     BombPlant(GridPos gridPos) : Plant(gridPos) {}
     void ready() override {
         resDir = "bomb";
-        sprite.setScale(100 / 96, 100 / 96);
+        pauseAnimation = true;
+        sprite.setOrigin(32.f, 32.f);
+        sprite.setScale(100 / 32, 100 / 32);
         Entity::ready();
         price = 5;
         group = "plant";
@@ -1073,10 +1075,16 @@ public:
         Entity::tick();
     }
     bool damage(float d) override {
-        for (Entity* victim : game->getGridCollisionsAround(getGridPos(), "zombie"))
-            victim->damage(500.f);
-        game->destroyEntity(id);
-        return true;
+        pauseAnimation = false;
+        return Entity::damage(d);
+    }
+    void updateAnimation(float dt) override {
+        Entity::updateAnimation(dt);
+        if (currentFrame == textures.size() - 1) {
+            for (Entity* victim : game->getGridCollisionsAround(getGridPos(), "zombie"))
+                victim->damage(500.f);
+            game->destroyEntity(id);
+        }
     }
 };
 
