@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <iostream>
 #include <vector>
 #include <cmath>
@@ -913,16 +914,16 @@ public:
         }
 
         if (isReady && game->hasZombieOnRowBefore(this->getGridPos())){
-            Projectile* projectile = makeNewProjectile();
-            game->createEntity(projectile);
+            makeNewProjectile();
             isReady = false;
         }
 
         Entity::tick();
     }
 
-    virtual Projectile* makeNewProjectile() {
-        return new Projectile(this->getGridPos());
+    virtual void makeNewProjectile() {
+        Projectile* projectile = new Projectile(this->getGridPos());
+        game->createEntity(projectile);
     }
 };
 
@@ -1143,8 +1144,9 @@ public:
         group = "plant";
         setGridPos(initGridPos);
     }
-    Projectile* makeNewProjectile() override {
-        return new ProjectileHeavy(this->getGridPos());
+    void makeNewProjectile() override {
+        ProjectileHeavy* projectile = new ProjectileHeavy(this->getGridPos());
+        game->createEntity(projectile);
     }
 };
 
@@ -1211,11 +1213,33 @@ void Game::spawnZombie(int type) {
 int main() {
     sf::RenderWindow window(sf::VideoMode(1600, 837), "Protect The Jungle: monkeys fight back!");
 
+    sf::Music music;
+    music.openFromFile("res/mainMenu.ogg");
+    music.play();
+
     // sample menu
     bool gameStartRequested = false;
-    Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested]{
+    Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested, &music]{
         gameStartRequested = true;
+        music.stop();
     });
+    sf::Texture texture;
+    sf::Sprite sprite;
+    texture.loadFromFile("res/monkey/0.png");
+    sprite.setTexture(texture);
+    sprite.setScale(20.f, 20.f);
+    sf::Texture texture1;
+    sf::Sprite sprite1;
+    texture1.loadFromFile("res/woodchopper/0.png");
+    sprite1.setTexture(texture1);
+    sprite1.setScale(20.f, 20.f);
+    sprite1.setPosition(1000.f,0.f);
+    sf::Texture texture2;
+    sf::Sprite sprite2;
+    texture2.loadFromFile("res/tree/0.png");
+    sprite2.setTexture(texture2);
+    sprite2.setScale(20.f, 20.f);
+    sprite2.setPosition(500.f,250.f);
     while (window.isOpen() && !gameStartRequested) {
         sf::Event event;
         while (window.pollEvent(event)) {
@@ -1224,6 +1248,9 @@ int main() {
             startGameButton.handleEvent(event, window);
         }
         window.clear();
+        window.draw(sprite);
+        window.draw(sprite1);
+        window.draw(sprite2);
         startGameButton.draw(window);
         window.display();
         sf::sleep(sf::milliseconds(16));
