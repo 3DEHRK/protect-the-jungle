@@ -493,6 +493,11 @@ public:
                 selectedPlant = 5;
             }, "res/bomb/0.png");
 
+        Button plant6Button(sf::Vector2f(1150.f, 720.f), sf::Vector2f(125.f, 80.f), "4$", sf::Color(50, 180, 50), [this]{
+                editMode = 1;
+                selectedPlant = 6;
+            }, "res/heavy_monkey/0.png");
+
         sf::Text bananasCountText = generateText(250, 680);
         sf::Text scoreText = generateText(550, 680);
 
@@ -512,6 +517,7 @@ public:
                 plant3Button.handleEvent(event, gameWindow);
                 plant4Button.handleEvent(event, gameWindow);
                 plant5Button.handleEvent(event, gameWindow);
+                plant6Button.handleEvent(event, gameWindow);
             }
             mousePos.x = sf::Mouse::getPosition(gameWindow).x * ((float)WINDOW_WIDTH / gameWindow.getSize().x);
             mousePos.y = sf::Mouse::getPosition(gameWindow).y * ((float)WINDOW_HEIGHT / gameWindow.getSize().y);
@@ -596,6 +602,7 @@ public:
             plant3Button.draw(gameWindow);
             plant4Button.draw(gameWindow);
             plant5Button.draw(gameWindow);
+            plant6Button.draw(gameWindow);
 
             gameWindow.display();
 
@@ -811,6 +818,7 @@ protected:
     float lifeSpan = 1.0f;
     int damageDone = 12;
     float baseVelocity = 1000.f;
+    float gravityMultiplier = 200.f;
 
     GridPos initGridPos;
     float lifeTimer = 0.f;
@@ -819,7 +827,7 @@ public:
     Projectile(GridPos gridPos) : initGridPos(gridPos) {}
 
     void ready() override {
-        resDir = "rock";
+        resDir = "stone";
         sprite.setScale(100/32, 100/32);
         Entity::ready();
         group = "projectile";
@@ -832,7 +840,7 @@ public:
     void tick() override {
         // imitate physics
         xVel -= game->deltaTime() * 200;
-        yVel += game->deltaTime() * 200;
+        yVel += game->deltaTime() * gravityMultiplier;
 
         lifeTimer += game->deltaTime();
         if (lifeTimer >= lifeSpan)
@@ -850,6 +858,27 @@ public:
         }
 
         Entity::tick();
+    }
+};
+
+class ProjectileHeavy : public Projectile {
+public:
+    ProjectileHeavy(GridPos gridPos) : Projectile(gridPos) {}
+
+    void ready() override {
+        baseVelocity = 1000.f;
+        yVel = -200.f;
+        lifeSpan = 1.7f;
+        gravityMultiplier = 300.f;
+        damageDone = 30.f;
+
+        resDir = "rock";
+        sprite.setScale(100/32, 100/32);
+        Entity::ready();
+        group = "projectile";
+        x = game->gridToFree(initGridPos.x);
+        y = game->gridToFree(initGridPos.y) - 10.f;
+        xVel = baseVelocity;
     }
 };
 
@@ -884,12 +913,16 @@ public:
         }
 
         if (isReady && game->hasZombieOnRowBefore(this->getGridPos())){
-            Projectile* projectile = new Projectile(this->getGridPos());
+            Projectile* projectile = makeNewProjectile();
             game->createEntity(projectile);
             isReady = false;
         }
 
         Entity::tick();
+    }
+
+    virtual Projectile* makeNewProjectile() {
+        return new Projectile(this->getGridPos());
     }
 };
 
@@ -1099,6 +1132,22 @@ public:
     }
 };
 
+class HeavyPlant : public Plant {
+public:
+    HeavyPlant(GridPos gridPos) : Plant(gridPos) {}
+    void ready() override {
+        resDir = "heavy_monkey";
+        sprite.setScale(100/32, 100/32);
+        Entity::ready();
+        price = 4;
+        group = "plant";
+        setGridPos(initGridPos);
+    }
+    Projectile* makeNewProjectile() override {
+        return new ProjectileHeavy(this->getGridPos());
+    }
+};
+
 
 int Game::placePlant() {
   GridPos gridPos(freeToGrid(mousePos.x), freeToGrid(mousePos.y));
@@ -1122,6 +1171,9 @@ int Game::placePlant() {
             break;
         case 5:
             plant = new BombPlant(gridPos);
+            break;
+        case 6:
+            plant = new HeavyPlant(gridPos);
             break;
         default:
             plant = new Plant(gridPos);
