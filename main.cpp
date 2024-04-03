@@ -1,10 +1,10 @@
 #include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
+#include <curl/curl.h>
 #include <iostream>
 #include <vector>
 #include <cmath>
 #include <functional>
-#include <curl/curl.h>
 #include <sstream>
 #include <time.h>
 #include <regex>
@@ -83,6 +83,101 @@ bool saveScore(std::string name, int score) {
 
     curl_global_cleanup();
     return isRequestSuccessful;
+}
+
+std::pair<std::string, int> getNameAndScoreByRank(const std::string& data, int rank) {
+    std::string name;
+    int score = 0;
+
+    // Find the "data" array
+    size_t pos = data.find("\"data\"");
+    if (pos == std::string::npos) {
+        std::cerr << "Data array not found in JSON" << std::endl;
+        return { name, score };
+    }
+
+    // Find the beginning of the array
+    pos = data.find('[', pos);
+    if (pos == std::string::npos) {
+        std::cerr << "Data array not found in JSON" << std::endl;
+        return { name, score };
+    }
+
+    // Iterate through each object in the array
+    while (true) {
+        // Find the beginning of an object
+        pos = data.find('{', pos);
+        if (pos == std::string::npos)
+            break;
+
+        // Find the end of the object
+        size_t endPos = data.find('}', pos);
+        if (endPos == std::string::npos)
+            break;
+
+        // Extract the object
+        std::string object = data.substr(pos, endPos - pos + 1);
+
+        // Find "rank"
+        size_t rankPos = object.find("\"rank\":\"" + std::to_string(rank) + "\"");
+        if (rankPos != std::string::npos) {
+            // Find "name"
+            size_t namePos = object.find("\"name\":\"");
+            if (namePos != std::string::npos) {
+                namePos += 8; // Length of "\"name\":\""
+                size_t nameEnd = object.find('"', namePos);
+                name = object.substr(namePos, nameEnd - namePos);
+            }
+
+            // Find "score"
+            size_t scorePos = object.find("\"score\":\"");
+            if (scorePos != std::string::npos) {
+                scorePos += 9; // Length of "\"score\":\""
+                size_t scoreEnd = object.find('"', scorePos);
+                score = std::stoi(object.substr(scorePos, scoreEnd - scorePos));
+            }
+
+            break; // Stop after finding the specified rank
+        }
+
+        // Move to the next object
+        pos = endPos + 1;
+    }
+
+    return { name, score };
+}
+
+std::vector<sf::Text*> curlGetScores() {
+    //curl_global_init(CURL_GLOBAL_DEFAULT);
+    CURL* curl = curl_easy_init();
+    std::string readBuffer;
+    std::vector<sf::Text*> texts;
+    if (curl) {
+        CURLcode res;
+        curl_easy_setopt(curl, CURLOPT_URL, "http://marco.jaros.ch/score/read.php");
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &readBuffer);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        res = curl_easy_perform(curl);
+        curl_easy_cleanup(curl);
+        if (res == CURLE_OK) {
+            for (int i = 1; i < 30; i++)
+            {
+                auto result = getNameAndScoreByRank(readBuffer, i);
+
+                // yeah this does leak memory but whatever..
+                sf::Font* font = new sf::Font;
+                font->loadFromFile("res/arial.ttf");
+
+                sf::Text* text = new sf::Text();
+                text->setFont(*font);
+                text->setCharacterSize(15);
+                text->setString(std::to_string(i) + ". " + std::to_string(result.second) + "   " + result.first);
+                text->setPosition(250, 300 + i*14);
+                texts.push_back(text);
+            }
+        }
+    }
+    return texts;
 }
 
 
@@ -1215,14 +1310,22 @@ int main() {
 
     sf::Music music;
     music.openFromFile("res/mainMenu.ogg");
-    music.play();
+
+    std::vector<sf::Text*> scoreTexts = curlGetScores();
 
     // sample menu
     bool gameStartRequested = false;
+    bool exitRequested = false;
     Button startGameButton(sf::Vector2f(650.f, 450.f), sf::Vector2f(300.f, 100.f), "Enter the Jungle", sf::Color(180, 100, 180), [&gameStartRequested, &music]{
         gameStartRequested = true;
         music.stop();
     });
+    Button endGameButton(sf::Vector2f(650.f, 550.f), sf::Vector2f(300.f, 50.f), "Dont enter it", sf::Color(200, 80, 120), [&exitRequested] {
+        exitRequested = true;
+    });
+    Button eminemButton(sf::Vector2f(650.f, 100.f), sf::Vector2f(100.f, 100.f), "Eminem Button", sf::Color(0, 80, 120), [&music] {
+        music.play();
+    }, "res/eminem.jpg");
     sf::Texture texture;
     sf::Sprite sprite;
     texture.loadFromFile("res/monkey/0.png");
@@ -1243,15 +1346,21 @@ int main() {
     while (window.isOpen() && !gameStartRequested) {
         sf::Event event;
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
+            if (event.type == sf::Event::Closed || exitRequested)
                 window.close();
             startGameButton.handleEvent(event, window);
+            endGameButton.handleEvent(event, window);
+            eminemButton.handleEvent(event, window);
         }
         window.clear();
         window.draw(sprite);
         window.draw(sprite1);
         window.draw(sprite2);
         startGameButton.draw(window);
+        endGameButton.draw(window);
+        eminemButton.draw(window);
+        for (sf::Text* text : scoreTexts)
+            window.draw(*text);
         window.display();
         sf::sleep(sf::milliseconds(16));
     }
