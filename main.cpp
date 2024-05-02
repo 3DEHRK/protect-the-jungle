@@ -366,8 +366,8 @@ public:
     sf::Font font;
     sf::Time delta;
     int uniqueId = 0;
-
-    int bananaCount = 1000;
+    
+    int bananaCount = 50;
     int editMode = 0; // 0: sleep, 1: build, 2: destroy
     int selectedPlant = 0;
     int score = 0;
@@ -634,7 +634,7 @@ public:
             }
 
             //dev
-            waveCount = 3600;
+            waveCount = 0;
 
             // spöwns a sömbie every tick with 1 zu füfhundert chance.
             if ((rand() % zombieChance + 1) == zombieChance) {
@@ -912,7 +912,7 @@ public:
 class Projectile : public Entity {
 protected:
     float lifeSpan = 1.0f;
-    int damageDone = 12;
+    int damageDone = 15;
     float baseVelocity = 1000.f;
     float gravityMultiplier = 200.f;
 
