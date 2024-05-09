@@ -590,7 +590,7 @@ public:
                 selectedPlant = 5;
             }, "res/bomb/0.png");
 
-        Button plant6Button(sf::Vector2f(1150.f, 720.f), sf::Vector2f(125.f, 80.f), "4$", sf::Color(50, 180, 50), [this]{
+        Button plant6Button(sf::Vector2f(1150.f, 720.f), sf::Vector2f(125.f, 80.f), "20$", sf::Color(50, 180, 50), [this]{
                 editMode = 1;
                 selectedPlant = 6;
             }, "res/heavy_monkey/0.png");
@@ -638,18 +638,17 @@ public:
             if ((rand() % zombieChance + 1) == zombieChance) {
                 int whichZombieNumber = rand() % 100;
                 // pushing a default skin 75%
-                if (whichZombieNumber <= 74)
+                if (whichZombieNumber <= 75)
                    spawnZombie(0);
-                else if (whichZombieNumber <= 86 && passedWaves > 2)
+                else if (whichZombieNumber <= 86 && passedWaves > 0)
                     spawnZombie(1);
-				else if (whichZombieNumber <= 99 && passedWaves > 4)
+				else if (whichZombieNumber <= 99 && passedWaves > 0)
                     if (rand() % 2 == 0)
 					    spawnZombie(2);
                     else
                         spawnZombie(3);
             }
             waveCount++;
-            std::cout << passedWaves;
             // noch einerhalb minute hört wave uf
             if(waveCount >= 5400) {
                 zombieChance = 200 + passedWaves * 15;
@@ -846,7 +845,7 @@ public:
     }
 
     bool damage(float d) override {
-        knockback += d / 4;
+        knockback += d / 5;
         return Entity::damage(d);
     }
 };
@@ -879,7 +878,7 @@ public:
 		Zombie::tick();
 	}
     bool damage(float d) override {
-        knockback += d / 4;
+        knockback += d / 5;
         return Entity::damage(d);
     }
 };
@@ -1233,7 +1232,7 @@ public:
         resDir = "heavy_monkey";
         sprite.setScale(100/32, 100/32);
         Entity::ready();
-        price = 4;
+        price = 20;
         group = "plant";
         setGridPos(initGridPos);
     }
@@ -1304,6 +1303,8 @@ void Game::spawnZombie(int type) {
 
 // Entry point function
 int main() {
+    FreeConsole();
+
     sf::RenderWindow window(sf::VideoMode(1600, 837), "Protect The Jungle: monkeys fight back!");
 
     sf::Music music;
