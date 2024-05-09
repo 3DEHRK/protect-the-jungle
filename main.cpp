@@ -374,8 +374,9 @@ public:
 
     bool isGameOver = false;
 
-    int waveCount = 0;
+    int waveCount = -500;
     int zombieChance = 500;
+    int passedWaves = 0;
 
     Game(sf::RenderWindow& window) : gameWindow(window) {
         WINDOW_WIDTH = gameWindow.getSize().x;
@@ -633,34 +634,31 @@ public:
                 entity->tick();
             }
 
-            //dev
-            waveCount = 0;
-
             // spöwns a sömbie every tick with 1 zu füfhundert chance.
             if ((rand() % zombieChance + 1) == zombieChance) {
                 int whichZombieNumber = rand() % 100;
                 // pushing a default skin 75%
                 if (whichZombieNumber <= 74)
                    spawnZombie(0);
-                else if (whichZombieNumber <= 86)
+                else if (whichZombieNumber <= 86 && passedWaves > 2)
                     spawnZombie(1);
-				else if (whichZombieNumber <= 99)
+				else if (whichZombieNumber <= 99 && passedWaves > 4)
                     if (rand() % 2 == 0)
 					    spawnZombie(2);
                     else
                         spawnZombie(3);
-                // 25 % für die andere looser
             }
             waveCount++;
+            std::cout << passedWaves;
             // noch einerhalb minute hört wave uf
             if(waveCount >= 5400) {
-                zombieChance = 500;
+                zombieChance = 200 + passedWaves * 15;
                 waveCount = 0;
-                
+                passedWaves++;
             // after 1 minute fangt wave aa
             }else if (waveCount >= 3600) {
                 // double spawn rate
-                zombieChance = 25;
+                zombieChance = 20 + passedWaves;
             }
             
 
