@@ -1413,7 +1413,7 @@ int main() {
                 }
                 window.clear();
 
-                if (event.type == sf::Event::TextEntered)
+                if (event.type == sf::Event::TextEntered && playerInput.getSize() < 11)
                 {
                     if ((event.text.unicode != lastPlayerInput || keyDebounceCounter >= 8) && playerInput.toAnsiString().length() <= 32) {
                         playerInput += event.text.unicode;
