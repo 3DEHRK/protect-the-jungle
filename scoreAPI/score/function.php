@@ -50,6 +50,9 @@ function storeScore($score){
     $name = mysqli_real_escape_string($conn, $score['name']);
     $score = mysqli_real_escape_string($conn, $score['score']);
 
+    $name = validateInput($name);
+    $score = validateInput($score);
+
     if (empty(trim($name))) {
         return error422('Enter you name');
     } elseif (empty(trim($score))) {
@@ -90,6 +93,16 @@ function storeScore($score){
 
 
 }
+
+function validateInput($data) {
+    global $conn;
+    $data = trim($data); // Leerzeichen am Anfang und Ende entfernen
+    $data = stripslashes($data); // Entfernen von Backslashes (\)
+    $data = htmlspecialchars($data); // Sonderzeichen in HTML-Codes umwandeln
+    $data = $conn->real_escape_string($data); // Datenbank-spezifisches Escaping
+    return $data;
+}
+
 
 function error422($message) {
     $data = [
